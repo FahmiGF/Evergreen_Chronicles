@@ -24,6 +24,9 @@ export default function HUD({
   onOpenStoryline,
   onOpenQuestLog,
   onOpenAffection,
+  onOpenCharacterStudio,
+  onToggleLandscapePainter,
+  isLandscapePainterActive = false,
   onReturnToMenu,
   onlineCount,
   pingMs,
@@ -263,11 +266,33 @@ export default function HUD({
 
         <button
           onClick={() => { sounds.playClick(); onOpenStoryline && onOpenStoryline(); }}
-          title="Alur Cerita & Sinematik [L]"
+          title="Alur Cerita & Sinematik [J]"
           className="bg-amber-900/90 hover:bg-amber-800 text-amber-100 border border-amber-400 px-2 py-1 rounded-md text-xs font-semibold transition flex items-center space-x-1"
         >
           <span>🎬</span>
           <span>{t.hud.storyline || 'Cerita'}</span>
+        </button>
+
+        <button
+          onClick={() => { sounds.playClick(); onOpenCharacterStudio && onOpenCharacterStudio(); }}
+          title="Studio Karakter & Lemari Busana [P]"
+          className="bg-purple-950/80 hover:bg-purple-900 text-purple-200 border border-purple-500 px-2 py-1 rounded-md text-xs font-semibold transition flex items-center space-x-1 ring-1 ring-purple-400/50"
+        >
+          <span>👤</span>
+          <span>Karakter [P]</span>
+        </button>
+
+        <button
+          onClick={() => { sounds.playClick(); onToggleLandscapePainter && onToggleLandscapePainter(); }}
+          title="Palet Pembentuk Lanskap & Terrain [L]"
+          className={`px-2 py-1 rounded-md text-xs font-semibold transition flex items-center space-x-1 ${
+            isLandscapePainterActive
+              ? 'bg-emerald-600 text-white border border-emerald-300 ring-2 ring-emerald-400 shadow-md animate-pulse'
+              : 'bg-emerald-950/80 hover:bg-emerald-900 text-emerald-200 border border-emerald-600'
+          }`}
+        >
+          <span>🖌️</span>
+          <span>Lanskap [L]</span>
         </button>
 
         <button

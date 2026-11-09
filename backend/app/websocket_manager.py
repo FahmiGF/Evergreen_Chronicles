@@ -87,6 +87,16 @@ class WorldWebSocketHub:
             for cid in dead_connections:
                 await self.disconnect(cid)
 
+    async def broadcast_world_action(self, action_type: str, x: int, y: int, details: Optional[Dict[str, Any]] = None):
+        """Helper to broadcast world action events to all connected clients."""
+        await self.broadcast({
+            "type": "world_action_sync",
+            "action_type": action_type,
+            "x": x,
+            "y": y,
+            "details": details or {}
+        })
+
     async def handle_client_message(self, client_id: str, raw_data: str, farm_grid: List[List[Dict[str, Any]]]):
         self.messages_received_count += 1
         try:

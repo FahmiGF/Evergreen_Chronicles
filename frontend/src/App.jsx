@@ -20,6 +20,8 @@ import QuestLogModal from './components/QuestLogModal';
 import AffectionModal from './components/AffectionModal';
 import StorylineModal from './components/StorylineModal';
 import BlueprintDock from './components/BlueprintDock';
+import CharacterStudioModal from './components/CharacterStudioModal';
+import LandscapePainterDock from './components/LandscapePainterDock';
 import { sounds } from './game/SoundFx';
 import { multiplayer } from './game/MultiplayerManager';
 
@@ -58,8 +60,55 @@ export default function App() {
   const [questLogOpen, setQuestLogOpen] = useState(false);
   const [affectionOpen, setAffectionOpen] = useState(false);
   const [storylineOpen, setStorylineOpen] = useState(false);
+  const [characterStudioOpen, setCharacterStudioOpen] = useState(false);
+  const [landscapePainterOpen, setLandscapePainterOpen] = useState(false);
+  const [activeLandscapeBrush, setActiveLandscapeBrush] = useState('grass');
+  const [landscapeBrushRadius, setLandscapeBrushRadius] = useState(1);
   const [currentZoneId, setCurrentZoneId] = useState('zone_farm');
   const [activeDialogueNpc, setActiveDialogueNpc] = useState(null);
+
+  // Landscape Terrain Painting Handler
+  const handlePaintLandscape = async (x, y, brushType, radius = 1) => {
+    sounds.playTill();
+    const targets = [];
+    if (radius === 1) {
+      targets.push({ x, y });
+    } else {
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx >= 0 && nx < 16 && ny >= 0 && ny < 16) {
+            targets.push({ x: nx, y: ny });
+          }
+        }
+      }
+    }
+
+    for (const pt of targets) {
+      try {
+        await fetch('/api/v1/game/landscape/paint/1', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ x: pt.x, y: pt.y, brush_type: brushType })
+        });
+      } catch (err) {
+        console.error('Landscape paint fetch error', err);
+      }
+    }
+
+    // Optimistically update local farm_grid
+    setGameState((prev) => {
+      if (!prev || !prev.farm_grid) return prev;
+      const nextGrid = prev.farm_grid.map(row => [...row]);
+      targets.forEach(pt => {
+        if (nextGrid[pt.y] && nextGrid[pt.y][pt.x]) {
+          nextGrid[pt.y][pt.x] = { ...nextGrid[pt.y][pt.x], tile_type: brushType };
+        }
+      });
+      return { ...prev, farm_grid: nextGrid };
+    });
+  };
 
   // Toast notification
   const [toast, setToast] = useState(null);
@@ -172,9 +221,17 @@ export default function App() {
       } else if (e.code === 'KeyU') {
         e.preventDefault();
         setAffectionOpen((prev) => !prev);
-      } else if (e.code === 'KeyL') {
+      } else if (e.code === 'KeyJ') {
         e.preventDefault();
         setStorylineOpen((prev) => !prev);
+      } else if (e.code === 'KeyP') {
+        e.preventDefault();
+        setCharacterStudioOpen((prev) => !prev);
+        sounds.playClick();
+      } else if (e.code === 'KeyL') {
+        e.preventDefault();
+        setLandscapePainterOpen((prev) => !prev);
+        sounds.playClick();
       } else if (e.code === 'KeyZ') {
         e.preventDefault();
         setBedOpen((prev) => !prev);
@@ -200,6 +257,8 @@ export default function App() {
         setQuestLogOpen(false);
         setAffectionOpen(false);
         setStorylineOpen(false);
+        setCharacterStudioOpen(false);
+        setLandscapePainterOpen(false);
         setBedOpen(false);
         setGuideOpen(false);
         setRosterOpen(false);
@@ -289,6 +348,9 @@ export default function App() {
         onOpenQuestLog={() => setQuestLogOpen(true)}
         onOpenAffection={() => setAffectionOpen(true)}
         onOpenStoryline={() => setStorylineOpen(true)}
+        onOpenCharacterStudio={() => setCharacterStudioOpen(true)}
+        onToggleLandscapePainter={() => setLandscapePainterOpen((prev) => !prev)}
+        isLandscapePainterActive={landscapePainterOpen}
         onOpenBed={() => setBedOpen(true)}
         onOpenGuide={() => setGuideOpen(true)}
         onOpenRoster={() => setRosterOpen(true)}
@@ -315,6 +377,10 @@ export default function App() {
           setIsTractorMounted={setIsTractorMounted}
           tractorAttachment={tractorAttachment}
           setTractorAttachment={setTractorAttachment}
+          isLandscapePainterActive={landscapePainterOpen}
+          activeLandscapeBrush={activeLandscapeBrush}
+          landscapeBrushRadius={landscapeBrushRadius}
+          onPaintLandscape={handlePaintLandscape}
           onOpenShipping={() => setInventoryOpen(true)}
           onOpenBed={() => setBedOpen(true)}
           onOpenFishing={() => setFishingOpen(true)}
@@ -507,6 +573,25 @@ export default function App() {
       <StorylineModal
         isOpen={storylineOpen}
         onClose={() => setStorylineOpen(false)}
+      />
+
+      {/* CHARACTER STUDIO & WARDROBE MODAL */}
+      <CharacterStudioModal
+        isOpen={characterStudioOpen}
+        onClose={() => setCharacterStudioOpen(false)}
+        gameState={gameState}
+        setGameState={setGameState}
+        showNotification={showNotification}
+      />
+
+      {/* LANDSCAPE & TERRAIN PAINTER DOCK */}
+      <LandscapePainterDock
+        isOpen={landscapePainterOpen}
+        onClose={() => setLandscapePainterOpen(false)}
+        activeBrush={activeLandscapeBrush}
+        onSelectBrush={setActiveLandscapeBrush}
+        brushRadius={landscapeBrushRadius}
+        onChangeRadius={setLandscapeBrushRadius}
       />
 
       {/* 5. TOAST NOTIFICATION */}

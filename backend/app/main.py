@@ -19,6 +19,11 @@ from app.game_store import (
     TUTORIAL_QUESTS,
     NPC_QUESTS_CATALOG,
     STORYLINE_CHAPTERS,
+    RACES_CATALOG,
+    PERSONALITIES_CATALOG,
+    BACKGROUNDS_CATALOG,
+    CUSTOMIZATION_PALETTES,
+    LANDSCAPE_BRUSHES,
     GameSave
 )
 from app.npc_engine import npc_manager
@@ -359,6 +364,74 @@ def set_tractor_attachment(slot_id: int, payload: Dict[str, Any] = Body(...)):
         "message": f"Mode traktor diubah ke: {names.get(attachment, attachment)}",
         "tractor": tractor
     }
+
+# ==================== CHARACTER STUDIO & PERSONALIZATION ENDPOINTS ====================
+@app.get("/api/v1/game/races")
+def get_playable_races():
+    """Retrieve 10 playable races with lore, attributes, and passive perks."""
+    return RACES_CATALOG
+
+@app.get("/api/v1/game/personalities")
+def get_personalities():
+    """Retrieve 12 character personality dimensions."""
+    return PERSONALITIES_CATALOG
+
+@app.get("/api/v1/game/backgrounds")
+def get_backgrounds():
+    """Retrieve 8 character background origins."""
+    return BACKGROUNDS_CATALOG
+
+@app.get("/api/v1/game/character/options")
+def get_character_options():
+    """Retrieve all physical customization options, palettes, and wardrobe catalog."""
+    return CUSTOMIZATION_PALETTES
+
+@app.post("/api/v1/game/character/customize/{slot_id}")
+def update_character_profile(slot_id: int, payload: Dict[str, Any] = Body(...)):
+    """Update and persist player appearance, race, personality, and wardrobe."""
+    profile = payload.get("profile", {})
+    wardrobe = payload.get("wardrobe", None)
+    save = game_store.update_character_profile(slot_id, profile, wardrobe)
+    return {
+        "success": True,
+        "message": f"Karakter {save.player.get('name', 'Pemain')} berhasil diperbarui!",
+        "character_profile": save.player["character_profile"],
+        "wardrobe": save.player["wardrobe"],
+        "race_perk": save.player.get("race_perk", "")
+    }
+
+# ==================== LANDSCAPE & TERRAIN PAINTER ENDPOINTS ====================
+@app.get("/api/v1/game/landscape/brushes")
+def get_landscape_brushes():
+    """Retrieve landscape and terrain painter brushes."""
+    return LANDSCAPE_BRUSHES
+
+@app.post("/api/v1/game/landscape/paint/{slot_id}")
+async def paint_landscape_tile(slot_id: int, payload: Dict[str, Any] = Body(...)):
+    """Paint or sculpt a terrain tile on the farm grid."""
+    save = game_store.get_save(slot_id)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    
+    x = payload.get("x")
+    y = payload.get("y")
+    brush_type = payload.get("brush_type", "grass")
+    
+    if 0 <= y < len(save.farm_grid) and 0 <= x < len(save.farm_grid[0]):
+        tile = save.farm_grid[y][x]
+        tile["tile_type"] = brush_type
+        
+        # Broadcast to multiplayer
+        await world_hub.broadcast_world_action("paint_terrain", x, y, {
+            "tile_type": brush_type
+        })
+        
+        return {
+            "success": True,
+            "message": f"Ubin ({x}, {y}) berhasil diubah menjadi {brush_type}",
+            "tile": tile
+        }
+    raise HTTPException(status_code=400, detail="Invalid tile coordinates")
 
 @app.post("/api/v1/game/zones/travel/{slot_id}")
 def travel_to_zone(slot_id: int, zone_id: str = Body(..., embed=True)):

@@ -230,4 +230,71 @@ def test_npc_gift_affection_level_up():
     assert "affection_result" in data
     assert data["affection_result"]["new_level"] <= 10
 
+def test_playable_races_and_options():
+    res = client.get("/api/v1/game/races")
+    assert res.status_code == 200
+    races = res.json()
+    assert len(races) == 10
+    race_ids = [r["id"] for r in races]
+    assert "race_human" in race_ids
+    assert "race_high_elf" in race_ids
+    assert "race_dragonkin" in race_ids
+    assert "race_shadowborn" in race_ids
+
+    # Check Customization options
+    opt_res = client.get("/api/v1/game/character/options")
+    assert opt_res.status_code == 200
+    opts = opt_res.json()
+    assert "skin_tones" in opts
+    assert len(opts["skin_tones"]) >= 7
+    assert "hair_styles" in opts
+    assert len(opts["hair_styles"]) >= 8
+
+def test_character_customization_persistence():
+    payload = {
+        "profile": {
+            "race_id": "race_high_elf",
+            "personality_id": "pers_curious",
+            "background_id": "bg_scholar",
+            "skin_tone": "tone_pale",
+            "hair_style": "elven_twin",
+            "hair_color": "#e2e8f0",
+            "eye_color": "#059669",
+            "ears": "ears_elven_long"
+        },
+        "wardrobe": {
+            "headwear": "crown_laurel",
+            "top": "tunic_emerald_druid",
+            "bottom": "skirt_pleated_green"
+        }
+    }
+    res = client.post("/api/v1/game/character/customize/1", json=payload)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["success"] is True
+    assert data["character_profile"]["race_id"] == "race_high_elf"
+    assert data["character_profile"]["ears"] == "ears_elven_long"
+    assert data["wardrobe"]["top"] == "tunic_emerald_druid"
+
+    # Verify persistence via GET /save/1
+    save_res = client.get("/api/v1/game/save/1")
+    assert save_res.status_code == 200
+    saved = save_res.json()
+    assert saved["player"]["character_profile"]["race_id"] == "race_high_elf"
+    assert saved["player"]["wardrobe"]["headwear"] == "crown_laurel"
+
+def test_landscape_painter_and_brushes():
+    res = client.get("/api/v1/game/landscape/brushes")
+    assert res.status_code == 200
+    brushes = res.json()
+    assert len(brushes) >= 8
+
+    # Paint tile (5, 5) with sand
+    paint_res = client.post("/api/v1/game/landscape/paint/1", json={"x": 5, "y": 5, "brush_type": "sand"})
+    assert paint_res.status_code == 200
+    data = paint_res.json()
+    assert data["success"] is True
+    assert data["tile"]["tile_type"] == "sand"
+
+
 

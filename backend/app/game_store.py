@@ -170,6 +170,288 @@ ITEMS_DATABASE: Dict[str, Item] = {
     "item_fellowship_medal": Item(id="item_fellowship_medal", name="Medali Harmoni Aetherwyn", category="material", description="Simbol persaudaraan dan cinta sejati dengan seluruh warga desa.", buy_price=0, sell_price=1200, stackable=False, icon_type="medal"),
 }
 
+# ==================== 10 PLAYABLE RACES CATALOG ====================
+RACES_CATALOG = [
+    {
+        "id": "race_human",
+        "name": "Human (Manusia)",
+        "heritage": "Pioneer Realm of Aetherwyn",
+        "icon": "👤",
+        "description": "Ras serbaguna dengan daya adaptasi tinggi dan semangat merintis yang tak tergoyahkan.",
+        "passive_perk": "Pengalaman Cepat: +10% EXP semua profesi & konsumsi stamina seimbang.",
+        "perk_type": "all_round",
+        "perk_values": {"exp_boost": 0.10, "stamina_cost_mult": 1.0},
+        "default_features": {"ears": "ears_human_round", "horns": "none", "wings": "none", "tail": "none"},
+        "lore": "Manusia mendirikan pemukiman pertama di lembah Aetherwyn, menggabungkan kearifan bertani tradisional dengan rasa ingin tahu terhadap misteri dunia."
+    },
+    {
+        "id": "race_high_elf",
+        "name": "High Elf (Peri Hutan)",
+        "heritage": "Ancient First Canopy of Sylva",
+        "icon": "🧝",
+        "description": "Keturunan pengelana kanopi purba yang memiliki ikatan batin erat dengan flora dan tanah.",
+        "passive_perk": "Sentuhan Alam: Tanaman tumbuh 25% lebih cepat & hasil panen berpotensi ganda.",
+        "perk_type": "farming",
+        "perk_values": {"growth_speed_mult": 1.25, "double_harvest_chance": 0.20},
+        "default_features": {"ears": "ears_elven_long", "horns": "none", "wings": "none", "tail": "none"},
+        "lore": "Kaum High Elf mampu mendengar bisikan benih di dalam tanah, menjaga keasrian hutan sembari membudidayakan rempah langka."
+    },
+    {
+        "id": "race_dwarf",
+        "name": "Dwarf (Kurcaci Penempa)",
+        "heritage": "Irondeep Mountain Citadel",
+        "icon": "🧔",
+        "description": "Ahli geologi dan pandai besi tangguh dari pegunungan batu berurat bijih.",
+        "passive_perk": "Nadi Batuan: +35% perolehan bijih tambang & daya tahan beliung 2x lipat.",
+        "perk_type": "mining",
+        "perk_values": {"mining_yield_boost": 0.35, "pickaxe_durability": 2.0},
+        "default_features": {"ears": "ears_human_round", "horns": "none", "wings": "none", "tail": "none"},
+        "lore": "Ditempa di antara gemeretak perapian, bangsa kurcaci menguasai rahasia peleburan logam kuno dan kristal Aether."
+    },
+    {
+        "id": "race_beastfolk",
+        "name": "Beastfolk (Kaum Satwa)",
+        "heritage": "Verdant Roar Plains",
+        "icon": "🦊",
+        "description": "Keturunan roh rimba bertelinga dan berekor rubah atau serigala yang lincah dan berempati tinggi.",
+        "passive_perk": "Sahabat Satwa: Hewan ternak menghasilkan +50% kebahagiaan & kecepatan gerak di rumput +15%.",
+        "perk_type": "animals",
+        "perk_values": {"animal_happy_boost": 0.50, "grass_speed_boost": 0.15},
+        "default_features": {"ears": "ears_beast_fluffy", "horns": "none", "wings": "none", "tail": "tail_beast_fluffy"},
+        "lore": "Kedekatan Beastfolk dengan hewan liar membuat mereka peternak alami yang paling dicintai oleh domba dan unggas."
+    },
+    {
+        "id": "race_dragonkin",
+        "name": "Dragonkin (Bangsawan Naga)",
+        "heritage": "Volcanic Cinderspire Peak",
+        "icon": "🐲",
+        "description": "Keturunan ras naga kuno bersisik halus dan bertanduk megah dengan ketahanan fisik luar biasa.",
+        "passive_perk": "Darah Wyrm: Imun terhadap udara panas & konsumsi stamina berkurang 20% saat kerja berat.",
+        "perk_type": "stamina",
+        "perk_values": {"stamina_cost_mult": 0.80, "heat_immunity": True},
+        "default_features": {"ears": "ears_human_round", "horns": "horns_draconic", "wings": "wings_dragon_leather", "tail": "tail_dragon_scaled"},
+        "lore": "Nafas naga yang mengalir di pembuluh darah mereka memberikan kekuatan tanpa tanding saat mencangkul tanah keras."
+    },
+    {
+        "id": "race_sylph",
+        "name": "Sylph (Roh Angin)",
+        "heritage": "Whispering Zephyr Isles",
+        "icon": "🌪️",
+        "description": "Makhluk aerodinamis yang melayang anggun mengikuti hembusan angin sepoi-sepoi.",
+        "passive_perk": "Langkah Angin: Kecepatan lari dasar meningkat +25% & stamina sprint gratis.",
+        "perk_type": "speed",
+        "perk_values": {"speed_mult": 1.25, "sprint_stamina": 0.0},
+        "default_features": {"ears": "ears_elven_long", "horns": "none", "wings": "wings_sylph_feather", "tail": "none"},
+        "lore": "Kaki bangsa Sylph nyaris tidak menyentuh tanah, memungkinkan mereka menjelajah seluruh penjuru peta dengan kilat."
+    },
+    {
+        "id": "race_fairykin",
+        "name": "Fairykin (Kaum Peri Mungil)",
+        "heritage": "Twilight Lumina Glade",
+        "icon": "🧚",
+        "description": "Sosok peri mungil bercahaya lembut dengan sayap kristal berkilauan.",
+        "passive_perk": "Aura Gemerlap: Menerangi area gelap di malam hari & panen bunga langka 2x lipat.",
+        "perk_type": "foraging",
+        "perk_values": {"night_glow": True, "rare_flower_mult": 2.0},
+        "default_features": {"ears": "ears_elven_long", "horns": "none", "wings": "wings_fairy_glimmer", "tail": "none"},
+        "lore": "Kehadiran Fairykin di malam hari membawa taburan debu peri yang menyuburkan tanah dan menenteramkan malam."
+    },
+    {
+        "id": "race_tideborn",
+        "name": "Tideborn (Keturunan Samudra)",
+        "heritage": "Coral Abyssal Depths",
+        "icon": "🧜",
+        "description": "Penjaga perairan berhiaskan sirip telinga mutiara yang menguasai seni memancing dan irigasi.",
+        "passive_perk": "Mata Laut: Target tangkapan pancingan 40% lebih lebar & ikan langka lebih sering mendekat.",
+        "perk_type": "fishing",
+        "perk_values": {"fishing_bar_width_mult": 1.40, "rare_fish_attraction": 0.30},
+        "default_features": {"ears": "ears_fin_aquatic", "horns": "none", "wings": "none", "tail": "tail_fish_aquatic"},
+        "lore": "Setiap arus air dan getaran permukaan kolam terbaca jelas oleh insting tajam para pemancing Tideborn."
+    },
+    {
+        "id": "race_golemkin",
+        "name": "Golemkin (Manusia Batu Aether)",
+        "heritage": "Forgotten Foundry of Titans",
+        "icon": "🗿",
+        "description": "Konstruk hidup bertubuh batuan granit yang dialiri inti energi kristal Aether murni.",
+        "passive_perk": "Rangka Baja: Kebal efek lelah stamina & biaya material saat membangun diskon 15%.",
+        "perk_type": "building",
+        "perk_values": {"building_cost_discount": 0.15, "stamina_exhaustion_proof": True},
+        "default_features": {"ears": "ears_human_round", "horns": "horns_crystal", "wings": "none", "tail": "none"},
+        "lore": "Diciptakan oleh arsitek purba, Golemkin sanggup mengangkat balok kayu raksasa tanpa mengenal rasa letih."
+    },
+    {
+        "id": "race_shadowborn",
+        "name": "Shadowborn (Kaum Bayangan)",
+        "heritage": "Eclipse Umbral Realm",
+        "icon": "🌑",
+        "description": "Pengelana malam misterius yang mendapatkan berkah kekuatan dari pancaran sinar bulan dan kegelapan.",
+        "passive_perk": "Tirai Malam: Kecepatan +30% saat malam & bonus drop loot gua tambang 25%.",
+        "perk_type": "combat",
+        "perk_values": {"night_speed_boost": 0.30, "dungeon_loot_boost": 0.25},
+        "default_features": {"ears": "ears_elven_long", "horns": "none", "wings": "none", "tail": "none"},
+        "lore": "Saat matahari terbenam dan kabut malam tiba, para Shadowborn justru berada dalam performa puncak mereka."
+    }
+]
+
+# ==================== 12 PERSONALITIES CATALOG ====================
+PERSONALITIES_CATALOG = [
+    {"id": "pers_kind", "name": "Kind (Penyayang)", "icon": "❤️", "desc": "Penuh empati, gemar menolong, disukai hewan ternak dan penduduk desa."},
+    {"id": "pers_brave", "name": "Brave (Pemberani)", "icon": "⚔️", "desc": "Tidak gentar menjelajahi gua tambang gelap dan menantang monster rimba."},
+    {"id": "pers_curious", "name": "Curious (Penasaran)", "icon": "🔍", "desc": "Selalu mencari rahasia tersembunyi, tanaman langka, dan teknologi baru."},
+    {"id": "pers_ambitious", "name": "Ambitious (Ambisius)", "icon": "👑", "desc": "Fokus pada pertumbuhan ekonomi, perluasan kebun, dan kejayaan pemukiman."},
+    {"id": "pers_creative", "name": "Creative (Kreatif)", "icon": "🎨", "desc": "Mencintai desain arsitektur, dekorasi ruangan, dan keindahan estetika."},
+    {"id": "pers_introverted", "name": "Introverted (Pendiam)", "icon": "📖", "desc": "Lebih menikmati ketenangan kebun, membaca buku, dan waktu menyendiri."},
+    {"id": "pers_outgoing", "name": "Outgoing (Supel)", "icon": "🎉", "desc": "Mudah mengakrabkan diri di festival dan cepat menaikkan hati warga desa."},
+    {"id": "pers_calm", "name": "Calm (Tenang)", "icon": "🧘", "desc": "Selalu berkepala dingin di saat krisis dan efisien dalam penggunaan stamina."},
+    {"id": "pers_adventurous", "name": "Adventurous (Petualang)", "icon": "🗺️", "desc": "Senang melintasi perbatasan zona dan mengumpulkan artefak kuno."},
+    {"id": "pers_practical", "name": "Practical (Praktis)", "icon": "🔧", "desc": "Mengutamakan mekanisasi pertanian, efisiensi traktor, dan otomatisasi."},
+    {"id": "pers_scholarly", "name": "Scholarly (Cendekiawan)", "icon": "🧪", "desc": "Ahli dalam eksperimen botani, mutasi benih, dan riset era peradaban."},
+    {"id": "pers_mischievous", "name": "Mischievous (Jenaka)", "icon": "🎭", "desc": "Penuh humor, suka membuat kejutan, dan membuat suasana selalu ceria."}
+]
+
+# ==================== 8 BACKGROUNDS CATALOG ====================
+BACKGROUNDS_CATALOG = [
+    {"id": "bg_merchant", "name": "Mantan Pedagang Kota", "icon": "💰", "bonus_gold": 300, "bonus_items": ["crop_parsnip", "crop_potato"], "desc": "Memulai dengan modal emas lebih banyak dan pemahaman harga pasar."},
+    {"id": "bg_village_heir", "name": "Pewaris Tanah Leluhur", "icon": "🏡", "bonus_gold": 100, "bonus_items": ["tool_hoe", "seed_wheat"], "desc": "Mendapat sambutan hangat dari tetua desa dan benih warisan keluarga."},
+    {"id": "bg_adventurer", "name": "Pengelana Kelana", "icon": "🛡️", "bonus_gold": 150, "bonus_items": ["tool_sword", "mat_copper_ore"], "desc": "Membawa pedang tempaan tua dan ketahanan fisik menjelajahi belantara."},
+    {"id": "bg_engineer", "name": "Magang Insinyur Mesin", "icon": "⚙️", "bonus_gold": 120, "bonus_items": ["fuel_bio_aether", "tech_sprinkler_basic"], "desc": "Paham teknologi traktor dan mekanisasi sejak hari pertama kedatangan."},
+    {"id": "bg_refugee", "name": "Bangsawan Dalam Pelarian", "icon": "⚜️", "bonus_gold": 250, "bonus_items": ["mat_aether_crystal"], "desc": "Menyimpan kristal pusaka kerajaan di balik jubah petaninya."},
+    {"id": "bg_scholar", "name": "Peneliti Ekologi Hutan", "icon": "📜", "bonus_gold": 100, "bonus_items": ["item_fertilizer_organic", "sapling_cherry"], "desc": "Membawa pupuk organik racikan sendiri dan bibit sakura langka."},
+    {"id": "bg_guardian", "name": "Penjaga Rumpun Rimba", "icon": "🌿", "bonus_gold": 80, "bonus_items": ["sapling_lumina", "crop_moonberry"], "desc": "Memiliki kepekaan mistis terhadap pohon lumina dan buah malam."},
+    {"id": "bg_wanderer", "name": "Musafir Tanpa Jejak", "icon": "👣", "bonus_gold": 150, "bonus_items": ["seed_parsnip", "mat_wood"], "desc": "Memulai lembaran hidup baru dari nol di bumi Aetherwyn."}
+]
+
+# ==================== CUSTOMIZATION PALETTES ====================
+CUSTOMIZATION_PALETTES = {
+    "skin_tones": [
+        {"id": "tone_warm_fair", "name": "Warm Fair (Kuning Langsat)", "hex": "#fed7aa"},
+        {"id": "tone_pale", "name": "Pale Elven (Putih Pucat)", "hex": "#fef3c7"},
+        {"id": "tone_olive", "name": "Olive (Sawo Matang)", "hex": "#d97706"},
+        {"id": "tone_deep_amber", "name": "Deep Amber (Emas Gelap)", "hex": "#b45309"},
+        {"id": "tone_obsidian", "name": "Obsidian Night (Gelap Pekat)", "hex": "#451a03"},
+        {"id": "tone_celestial_blue", "name": "Celestial Cyan (Biru Roh)", "hex": "#a5f3fc"},
+        {"id": "tone_draconic_crimson", "name": "Draconic Ruby (Merah Naga)", "hex": "#fca5a5"}
+    ],
+    "hair_styles": [
+        {"id": "adventurer", "name": "Rambut Petualang Pendek", "category": "classic"},
+        {"id": "braided_long", "name": "Kepang Panjang Rimba", "category": "long"},
+        {"id": "spiky", "name": "Spiky Ksatria Angin", "category": "short"},
+        {"id": "wavy_bob", "name": "Wavy Bob Elegan", "category": "medium"},
+        {"id": "elven_twin", "name": "Kuncir Kembar Peri", "category": "long"},
+        {"id": "dwarven_bun", "name": "Sanggul Pandai Besi", "category": "bun"},
+        {"id": "mage_shaggy", "name": "Shaggy Cendekiawan", "category": "medium"},
+        {"id": "royal_curly", "name": "Ikal Bangsawan Istana", "category": "long"}
+    ],
+    "hair_colors": [
+        {"id": "hair_chestnut", "name": "Cokelat Kayu Manis", "hex": "#78350f"},
+        {"id": "hair_golden", "name": "Emas Jagung", "hex": "#eab308"},
+        {"id": "hair_silver", "name": "Perak Salju", "hex": "#e2e8f0"},
+        {"id": "hair_crimson", "name": "Merah Delima", "hex": "#dc2626"},
+        {"id": "hair_obsidian", "name": "Hitam Arang", "hex": "#1c1917"},
+        {"id": "hair_sakura", "name": "Merah Muda Sakura", "hex": "#f472b6"},
+        {"id": "hair_aether_cyan", "name": "Cyan Kristal Aether", "hex": "#06b6d4"},
+        {"id": "hair_emerald", "name": "Hijau Zamrud", "hex": "#16a34a"}
+    ],
+    "eye_colors": [
+        {"id": "eye_sapphire", "name": "Biru Safir", "hex": "#2563eb"},
+        {"id": "eye_emerald", "name": "Hijau Zamrud", "hex": "#059669"},
+        {"id": "eye_amber", "name": "Kuning Amber", "hex": "#d97706"},
+        {"id": "eye_ruby", "name": "Merah Delima", "hex": "#dc2626"},
+        {"id": "eye_amethyst", "name": "Ungu Ametis", "hex": "#7c3aed"},
+        {"id": "eye_obsidian", "name": "Hitam Pekat", "hex": "#0f172a"}
+    ],
+    "face_shapes": [
+        {"id": "shape_oval", "name": "Oval Harmonis"},
+        {"id": "shape_angular", "name": "Tirus Tegas"},
+        {"id": "shape_round", "name": "Bulat Ramah"},
+        {"id": "shape_chiseled", "name": "Ksatria Rahang Kokoh"}
+    ],
+    "facial_markings": [
+        {"id": "none", "name": "Tanpa Tanda"},
+        {"id": "freckles", "name": "Bintik Matahari (Freckles)"},
+        {"id": "scar_cheek", "name": "Bekas Luka Pipih (Veteran)"},
+        {"id": "mystic_rune", "name": "Rune Magis Pelindung"},
+        {"id": "battle_paint", "name": "Cat Perang Rimba"}
+    ],
+    "body_builds": [
+        {"id": "slender", "name": "Ramping Lincah"},
+        {"id": "balanced", "name": "Proporsional Seimbang"},
+        {"id": "muscular", "name": "Kekar Berotot"},
+        {"id": "petite", "name": "Mungil Gesit"}
+    ],
+    "appendages": {
+        "ears": [
+            {"id": "ears_human_round", "name": "Telinga Manusia Bulat"},
+            {"id": "ears_elven_long", "name": "Telinga Peri Runcing Panjang"},
+            {"id": "ears_beast_fluffy", "name": "Telinga Satwa Berbulu Halus"},
+            {"id": "ears_fin_aquatic", "name": "Sirip Telinga Samudra Mutiara"}
+        ],
+        "horns": [
+            {"id": "none", "name": "Tanpa Tanduk"},
+            {"id": "horns_draconic", "name": "Tanduk Naga Gagah"},
+            {"id": "horns_curled", "name": "Tanduk Melingkar Tanduk Domba"},
+            {"id": "horns_crystal", "name": "Tanduk Kristal Aether"}
+        ],
+        "wings": [
+            {"id": "none", "name": "Tanpa Sayap"},
+            {"id": "wings_fairy_glimmer", "name": "Sayap Peri Berpendar"},
+            {"id": "wings_dragon_leather", "name": "Sayap Naga Membran"},
+            {"id": "wings_sylph_feather", "name": "Sayap Bulu Angin"}
+        ],
+        "tails": [
+            {"id": "none", "name": "Tanpa Ekor"},
+            {"id": "tail_beast_fluffy", "name": "Ekor Rubah Rimba Lebat"},
+            {"id": "tail_dragon_scaled", "name": "Ekor Naga Bersisik Baja"},
+            {"id": "tail_fish_aquatic", "name": "Ekor Ikan Samudra"}
+        ]
+    },
+    "wardrobe": {
+        "headwear": [
+            {"id": "hat_straw", "name": "Topi Jerami Petani Tradisional", "icon": "👒"},
+            {"id": "hat_beret_merchant", "name": "Baret Bulu Saudagar", "icon": "🧢"},
+            {"id": "helm_iron", "name": "Helm Pelindung Besi", "icon": "🪖"},
+            {"id": "crown_laurel", "name": "Mahkota Daun Emas", "icon": "👑"},
+            {"id": "none", "name": "Tanpa Penutup Kepala", "icon": "❌"}
+        ],
+        "tops": [
+            {"id": "tunic_red_classic", "name": "Kemeja Merah Petualang", "icon": "👕", "hex": "#dc2626"},
+            {"id": "armor_iron_mail", "name": "Baju Zirah Rantai Besi", "icon": "🛡️", "hex": "#64748b"},
+            {"id": "robe_velvet_royal", "name": "Jubah Beludru Bangsawan", "icon": "🧥", "hex": "#831843"},
+            {"id": "coat_engineer_cyan", "name": "Jas Praktik Insinyur Aether", "icon": "🥼", "hex": "#0891b2"},
+            {"id": "tunic_emerald_druid", "name": "Tunik Hijau Pelindung Rimba", "icon": "🌿", "hex": "#15803d"}
+        ],
+        "bottoms": [
+            {"id": "pants_blue_overalls", "name": "Celana Kodok Denim Biru", "hex": "#1e3a8a"},
+            {"id": "pants_hardy_leather", "name": "Celana Kulit Tempa Rowan", "hex": "#78350f"},
+            {"id": "trousers_silk_gold", "name": "Celana Sutra Bergaris Emas", "hex": "#ca8a04"},
+            {"id": "skirt_pleated_green", "name": "Rok Lipit Tenun Hijau", "hex": "#166534"}
+        ],
+        "footwear": [
+            {"id": "boots_leather_work", "name": "Sepatu Bot Kulit Kerja", "hex": "#451a03"},
+            {"id": "boots_iron_greaves", "name": "Sepatu Pelindung Logam", "hex": "#475569"},
+            {"id": "sandals_elven_woven", "name": "Sandal Anyaman Peri", "hex": "#b45309"}
+        ],
+        "back_items": [
+            {"id": "backpack_leather", "name": "Ransel Kulit Penjelajah", "icon": "🎒"},
+            {"id": "cape_crimson_knight", "name": "Mantel Merah Ksatria", "icon": "🧣"},
+            {"id": "none", "name": "Tanpa Aksesori Punggung", "icon": "❌"}
+        ]
+    }
+}
+
+# ==================== LANDSCAPE BRUSHES CATALOG ====================
+LANDSCAPE_BRUSHES = [
+    {"id": "brush_grass", "name": "Padang Rumput Hijau (Grassland)", "icon": "🌱", "tile_type": "grass", "color": "#2d5a27", "desc": "Rumput hijau subur khas pedesaan Aetherwyn."},
+    {"id": "brush_sand", "name": "Pasir Gurun & Oasis (Sand Dune)", "icon": "🏜️", "tile_type": "sand", "color": "#d97706", "desc": "Lahan berpasir halus cocok untuk tanaman kurma dan kaktus."},
+    {"id": "brush_snow", "name": "Tundra Salju Putih (Snowland)", "icon": "❄️", "tile_type": "snow", "color": "#e2e8f0", "desc": "Lapisan salju abadi pegunungan Frostpeak, tempat frostberry tumbuh subur."},
+    {"id": "brush_marsh", "name": "Rawa Lahan Gambut (Swampland)", "icon": "🌾", "tile_type": "marsh", "color": "#3f3f46", "desc": "Tanah gambut lembap kaya mineral rawa dan jamur ajaib."},
+    {"id": "brush_stone", "name": "Jalan Batu Paving (Cobblestone)", "icon": "🧱", "tile_type": "stone_path", "color": "#64748b", "desc": "Jalan setapak batu rapi untuk mempercepat langkah kaki dan traktor."},
+    {"id": "brush_volcanic", "name": "Batuan Basal Vulkanik (Volcanic)", "icon": "🌋", "tile_type": "volcanic", "color": "#1c1917", "desc": "Abu vulkanik kaya fosfor dari kawah naga Cinderspire."},
+    {"id": "brush_water_shallow", "name": "Kanal Air Dangkal (Shallow Water)", "icon": "💧", "tile_type": "water_shallow", "color": "#0284c7", "desc": "Saluran air irigasi untuk mengairi tanah bercocok tanam."},
+    {"id": "brush_water_deep", "name": "Danau Kristal Biru (Deep Water)", "icon": "🌊", "tile_type": "water_deep", "color": "#075985", "desc": "Danau dalam yang kaya ikan langka dan pantulan langit."}
+]
+
 class EvergreenGameEngine:
     """Core Game Engine Manager handling game state, procedural world, and saves."""
     def __init__(self):
@@ -413,12 +695,65 @@ class EvergreenGameEngine:
                 save.player["tractor"] = {
                     "owned": True,
                     "mounted": False,
-                    "x": 11,
-                    "y": 8,
+                    "x": 11 * 40,
+                    "y": 8 * 40,
+                    "dir": "down",
                     "attachment": "tiller",
                     "fuel": 100,
+                    "max_fuel": 100,
                     "speed_boost": 1.75
                 }
+            if "character_profile" not in save.player or not save.player.get("character_profile"):
+                save.player["character_profile"] = {
+                    "race_id": "race_human",
+                    "personality_id": "pers_brave",
+                    "background_id": "bg_adventurer",
+                    "skin_tone": "tone_warm_fair",
+                    "face_shape": "shape_oval",
+                    "hair_style": "adventurer",
+                    "hair_color": "#b45309",
+                    "hair_highlight": "#fde047",
+                    "eye_color": "#2563eb",
+                    "facial_marking": "none",
+                    "body_build": "balanced",
+                    "ears": "ears_human_round",
+                    "horns": "none",
+                    "wings": "none",
+                    "tail": "none"
+                }
+            if "wardrobe" not in save.player or not save.player.get("wardrobe"):
+                save.player["wardrobe"] = {
+                    "headwear": "hat_straw",
+                    "top": "tunic_red_classic",
+                    "bottom": "pants_blue_overalls",
+                    "footwear": "boots_leather_work",
+                    "back_item": "backpack_leather",
+                    "outfit_presets": {
+                        "work": {"top": "tunic_red_classic", "bottom": "pants_blue_overalls", "headwear": "hat_straw"},
+                        "adventure": {"top": "armor_iron_mail", "bottom": "pants_hardy_leather", "headwear": "helm_iron"},
+                        "formal": {"top": "robe_velvet_royal", "bottom": "trousers_silk_gold", "headwear": "crown_laurel"},
+                        "sleepwear": {"top": "shirt_cotton_white", "bottom": "pants_soft_linen", "headwear": "none"}
+                    }
+                }
+        return save
+
+    def update_character_profile(self, slot_id: int, profile: Dict[str, Any], wardrobe: Optional[Dict[str, Any]] = None) -> GameSave:
+        save = self.get_save(slot_id)
+        if not save:
+            self._init_default_save()
+            save = self.save_slots[1]
+        
+        save.player["character_profile"] = {**save.player.get("character_profile", {}), **profile}
+        if wardrobe:
+            save.player["wardrobe"] = {**save.player.get("wardrobe", {}), **wardrobe}
+        
+        # Sync race perks to player
+        race_id = profile.get("race_id")
+        matching_race = next((r for r in RACES_CATALOG if r["id"] == race_id), None)
+        if matching_race:
+            save.player["race_perk"] = matching_race["passive_perk"]
+            save.player["race_name"] = matching_race["name"]
+        
         return save
 
     def save_game(self, slot_id: int, payload: Dict[str, Any]) -> GameSave:

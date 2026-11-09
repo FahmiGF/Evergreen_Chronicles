@@ -24,6 +24,10 @@ export default function GameCanvas({
   setIsTractorMounted,
   tractorAttachment = 'tiller',
   setTractorAttachment,
+  isLandscapePainterActive = false,
+  activeLandscapeBrush = 'grass',
+  landscapeBrushRadius = 1,
+  onPaintLandscape,
   onOpenShipping,
   onOpenBed,
   onOpenFishing,
@@ -156,13 +160,18 @@ export default function GameCanvas({
   useEffect(() => {
     const unsub = multiplayer.subscribe((event) => {
       if (event.type === 'world_action_sync') {
-        const { action_type, x, y, details } = event.action;
+        const action_type = event.action_type || event.action?.action_type;
+        const x = event.x ?? event.action?.x;
+        const y = event.y ?? event.action?.y;
+        const details = event.details || event.action?.details || {};
+
         setGameState((prev) => {
           if (!prev || !prev.farm_grid) return prev;
           const grid = [...prev.farm_grid.map((r) => [...r])];
           if (grid[y] && grid[y][x]) {
             const tile = grid[y][x];
             if (action_type === 'till') tile.tile_type = 'tilled';
+            else if (action_type === 'paint_terrain') tile.tile_type = details.tile_type || 'grass';
             else if (action_type === 'water') {
               tile.tile_type = 'watered';
               if (tile.crop) tile.crop.watered_today = true;
@@ -605,6 +614,14 @@ export default function GameCanvas({
     e.preventDefault();
     const tx = hoverTile.x;
     const ty = hoverTile.y;
+
+    // Check Landscape Painter Mode
+    if (isLandscapePainterActive && activeLandscapeBrush) {
+      if (onPaintLandscape) {
+        onPaintLandscape(tx, ty, activeLandscapeBrush, landscapeBrushRadius);
+      }
+      return;
+    }
 
     // Check Blueprint Mode placement
     if (viewMode === 'blueprint') {
@@ -1115,12 +1132,46 @@ export default function GameCanvas({
       topColor = '#3b1a06';
       leftColor = '#241003';
       rightColor = '#2c1404';
-    }
-
-    if (isPond) {
+    } else if (tileType === 'sand') {
+      topColor = '#d97706';
+      leftColor = '#b45309';
+      rightColor = '#92400e';
+    } else if (tileType === 'snow') {
+      topColor = '#f1f5f9';
+      leftColor = '#cbd5e1';
+      rightColor = '#94a3b8';
+    } else if (tileType === 'marsh') {
+      topColor = '#3f4f24';
+      leftColor = '#2a3617';
+      rightColor = '#1e2710';
+    } else if (tileType === 'cobblestone') {
+      topColor = '#64748b';
+      leftColor = '#475569';
+      rightColor = '#334155';
+    } else if (tileType === 'volcanic') {
+      topColor = '#292524';
+      leftColor = '#1c1917';
+      rightColor = '#0c0a09';
+    } else if (tileType === 'water_shallow') {
+      topColor = '#38bdf8';
+      leftColor = '#0284c7';
+      rightColor = '#0369a1';
+    } else if (tileType === 'water_deep') {
       topColor = '#0369a1';
       leftColor = '#075985';
       rightColor = '#0c4a6e';
+    }
+
+    if (isPond || tileType === 'water_shallow' || tileType === 'water_deep') {
+      if (!isPond && tileType === 'water_shallow') {
+        topColor = '#38bdf8';
+        leftColor = '#0284c7';
+        rightColor = '#0369a1';
+      } else {
+        topColor = '#0369a1';
+        leftColor = '#075985';
+        rightColor = '#0c4a6e';
+      }
     }
 
     // Left Vertical Wall
@@ -1403,11 +1454,14 @@ export default function GameCanvas({
     ctx.fillText('🚜 TRAKTOR', p.x - 22, p.y - 34);
   };
 
-  // 3D Player Avatar
+  // 3D Player Avatar with Full Race & Wardrobe Customization
   const draw3DPlayer = (ctx) => {
     const gx = playerPosRef.current.x / TILE_SIZE;
     const gy = playerPosRef.current.y / TILE_SIZE;
     const p = toIso(gx + 0.5, gy + 0.5, 10);
+
+    const charProfile = gameState?.player?.character_profile || {};
+    const wardrobe = gameState?.player?.wardrobe || {};
 
     // Shadow
     ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
@@ -1415,19 +1469,54 @@ export default function GameCanvas({
     ctx.ellipse(p.x, p.y, 8, 4, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Blue Overalls & Red Shirt
-    ctx.fillStyle = '#1e3a8a';
+    // Bottoms
+    let bottomColor = '#1e3a8a';
+    if (wardrobe.bottom === 'pants_hardy_leather') bottomColor = '#78350f';
+    else if (wardrobe.bottom === 'trousers_silk_gold') bottomColor = '#ca8a04';
+    else if (wardrobe.bottom === 'skirt_pleated_green') bottomColor = '#166534';
+    ctx.fillStyle = bottomColor;
     ctx.fillRect(p.x - 4, p.y - 10, 8, 8);
-    ctx.fillStyle = '#dc2626';
+
+    // Tops
+    let topColor = '#dc2626';
+    if (wardrobe.top === 'armor_iron_mail') topColor = '#64748b';
+    else if (wardrobe.top === 'robe_velvet_royal') topColor = '#831843';
+    else if (wardrobe.top === 'coat_engineer_cyan') topColor = '#0891b2';
+    else if (wardrobe.top === 'tunic_emerald_druid') topColor = '#15803d';
+    ctx.fillStyle = topColor;
     ctx.fillRect(p.x - 4, p.y - 16, 8, 6);
 
-    // Head
-    ctx.fillStyle = '#fed7aa';
+    // Head / Skin Tone
+    const skinTone = charProfile.skin_tone || '#fed7aa';
+    ctx.fillStyle = skinTone;
     ctx.fillRect(p.x - 3, p.y - 22, 6, 6);
 
-    // Straw Hat
-    ctx.fillStyle = '#eab308';
-    ctx.fillRect(p.x - 6, p.y - 25, 12, 3);
+    // Hair
+    const hairColor = charProfile.hair_color || '#78350f';
+    ctx.fillStyle = hairColor;
+    ctx.fillRect(p.x - 4, p.y - 24, 8, 3);
+
+    // Horns (Draconic/Crystal)
+    if (charProfile.appendages?.horns && charProfile.appendages.horns !== 'none') {
+      ctx.fillStyle = charProfile.appendages.horns === 'horns_crystal' ? '#38bdf8' : '#78350f';
+      ctx.fillRect(p.x - 5, p.y - 27, 2, 4);
+      ctx.fillRect(p.x + 3, p.y - 27, 2, 4);
+    }
+
+    // Headwear
+    if (wardrobe.headwear === 'hat_straw') {
+      ctx.fillStyle = '#eab308';
+      ctx.fillRect(p.x - 6, p.y - 25, 12, 3);
+    } else if (wardrobe.headwear === 'helm_iron') {
+      ctx.fillStyle = '#475569';
+      ctx.fillRect(p.x - 4, p.y - 26, 8, 5);
+    } else if (wardrobe.headwear === 'crown_laurel') {
+      ctx.fillStyle = '#f59e0b';
+      ctx.fillRect(p.x - 4, p.y - 25, 8, 2);
+    } else if (wardrobe.headwear === 'hat_beret_merchant') {
+      ctx.fillStyle = '#1e3a8a';
+      ctx.fillRect(p.x - 5, p.y - 26, 10, 3);
+    }
   };
 
   // 3D Living NPC
@@ -1847,6 +1936,52 @@ export default function GameCanvas({
           ctx.fillRect(tx + 6, ty + 6, TILE_SIZE - 12, TILE_SIZE - 12);
           ctx.fillStyle = 'rgba(56, 189, 248, 0.25)';
           ctx.fillRect(tx + 4, ty + 4, TILE_SIZE - 8, 4);
+        } else if (tile.tile_type === 'sand') {
+          ctx.fillStyle = '#fcd34d';
+          ctx.fillRect(tx + 1, ty + 1, TILE_SIZE - 2, TILE_SIZE - 2);
+          ctx.fillStyle = '#f59e0b';
+          ctx.fillRect(tx + 6, ty + 8, 14, 2);
+          ctx.fillRect(tx + 18, ty + 20, 16, 2);
+        } else if (tile.tile_type === 'snow') {
+          ctx.fillStyle = '#f8fafc';
+          ctx.fillRect(tx + 1, ty + 1, TILE_SIZE - 2, TILE_SIZE - 2);
+          ctx.fillStyle = '#bae6fd';
+          ctx.fillRect(tx + 8, ty + 12, 4, 4);
+          ctx.fillRect(tx + 24, ty + 22, 5, 5);
+        } else if (tile.tile_type === 'marsh') {
+          ctx.fillStyle = '#365314';
+          ctx.fillRect(tx + 1, ty + 1, TILE_SIZE - 2, TILE_SIZE - 2);
+          ctx.fillStyle = '#14532d';
+          ctx.fillRect(tx + 4, ty + 14, 12, 6);
+          ctx.fillStyle = '#713f12';
+          ctx.fillRect(tx + 20, ty + 8, 10, 8);
+        } else if (tile.tile_type === 'cobblestone') {
+          ctx.fillStyle = '#475569';
+          ctx.fillRect(tx + 1, ty + 1, TILE_SIZE - 2, TILE_SIZE - 2);
+          ctx.strokeStyle = '#334155';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(tx + 3, ty + 3, 16, 14);
+          ctx.strokeRect(tx + 21, ty + 3, 16, 14);
+          ctx.strokeRect(tx + 11, ty + 19, 18, 14);
+        } else if (tile.tile_type === 'volcanic') {
+          ctx.fillStyle = '#1c1917';
+          ctx.fillRect(tx + 1, ty + 1, TILE_SIZE - 2, TILE_SIZE - 2);
+          ctx.fillStyle = '#ef4444';
+          ctx.fillRect(tx + 8, ty + 14, 12, 2);
+          ctx.fillStyle = '#f97316';
+          ctx.fillRect(tx + 18, ty + 24, 10, 2);
+        } else if (tile.tile_type === 'water_shallow') {
+          ctx.fillStyle = '#38bdf8';
+          ctx.fillRect(tx + 1, ty + 1, TILE_SIZE - 2, TILE_SIZE - 2);
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+          ctx.fillRect(tx + 4, ty + 10, 16, 3);
+          ctx.fillRect(tx + 16, ty + 24, 18, 3);
+        } else if (tile.tile_type === 'water_deep') {
+          ctx.fillStyle = '#0369a1';
+          ctx.fillRect(tx + 1, ty + 1, TILE_SIZE - 2, TILE_SIZE - 2);
+          ctx.fillStyle = '#075985';
+          ctx.fillRect(tx + 6, ty + 12, 14, 4);
+          ctx.fillRect(tx + 14, ty + 26, 18, 4);
         } else if (tile.tile_type === 'obstacle_weed') {
           ctx.fillStyle = '#15803d';
           ctx.fillRect(tx + 12, ty + 16, 6, 16);
@@ -2218,38 +2353,163 @@ export default function GameCanvas({
     const isMoving = isMovingRef.current;
     const step = isMoving ? Math.floor(walkFrameRef.current) % 2 : 0;
 
+    const charProfile = gameState?.player?.character_profile || {};
+    const wardrobe = gameState?.player?.wardrobe || {};
+
+    // 1. Shadow
     ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
     ctx.beginPath();
     ctx.ellipse(px + 20, py + 36, 12, 6, 0, 0, Math.PI * 2);
     ctx.fill();
 
+    // 2. Wings (Behind body)
+    if (charProfile.appendages?.wings && charProfile.appendages.wings !== 'none') {
+      if (charProfile.appendages.wings === 'wings_fairy_glimmer') {
+        ctx.fillStyle = 'rgba(165, 243, 252, 0.7)';
+        ctx.fillRect(px + 4, py + 12, 8, 12);
+        ctx.fillRect(px + 28, py + 12, 8, 12);
+      } else if (charProfile.appendages.wings === 'wings_dragon_leather') {
+        ctx.fillStyle = '#7f1d1d';
+        ctx.fillRect(px + 2, py + 10, 10, 14);
+        ctx.fillRect(px + 28, py + 10, 10, 14);
+      } else {
+        ctx.fillStyle = '#e2e8f0';
+        ctx.fillRect(px + 4, py + 12, 8, 12);
+        ctx.fillRect(px + 28, py + 12, 8, 12);
+      }
+    }
+
+    // 3. Tail (Behind body)
+    if (charProfile.appendages?.tail && charProfile.appendages.tail !== 'none') {
+      ctx.fillStyle = charProfile.hair_color || '#d97706';
+      ctx.fillRect(px + 28, py + 24, 7, 6);
+    }
+
+    // 4. Back Item (Cape / Backpack)
+    if (wardrobe.back_item === 'cape_crimson_knight') {
+      ctx.fillStyle = '#991b1b';
+      ctx.fillRect(px + 10, py + 18, 20, 14);
+    } else if (wardrobe.back_item === 'backpack_leather') {
+      ctx.fillStyle = '#78350f';
+      ctx.fillRect(px + 11, py + 16, 18, 12);
+    }
+
+    // 5. Legs / Bottoms & Footwear
+    let bottomColor = '#1e3a8a';
+    if (wardrobe.bottom === 'pants_hardy_leather') bottomColor = '#78350f';
+    else if (wardrobe.bottom === 'trousers_silk_gold') bottomColor = '#ca8a04';
+    else if (wardrobe.bottom === 'skirt_pleated_green') bottomColor = '#166534';
+
     const legOffset = isMoving ? (step === 0 ? -3 : 3) : 0;
-    ctx.fillStyle = '#1e3a8a';
+    ctx.fillStyle = bottomColor;
     ctx.fillRect(px + 12, py + 26, 6, 10 + legOffset);
     ctx.fillRect(px + 22, py + 26, 6, 10 - legOffset);
 
-    ctx.fillStyle = '#dc2626';
+    // Footwear
+    let bootColor = '#451a03';
+    if (wardrobe.footwear === 'boots_iron_greaves') bootColor = '#475569';
+    else if (wardrobe.footwear === 'sandals_elven_woven') bootColor = '#b45309';
+    ctx.fillStyle = bootColor;
+    ctx.fillRect(px + 11, py + 34 + legOffset, 7, 3);
+    ctx.fillRect(px + 22, py + 34 - legOffset, 7, 3);
+
+    // 6. Torso / Top
+    let topColor = '#dc2626';
+    if (wardrobe.top === 'armor_iron_mail') topColor = '#64748b';
+    else if (wardrobe.top === 'robe_velvet_royal') topColor = '#831843';
+    else if (wardrobe.top === 'coat_engineer_cyan') topColor = '#0891b2';
+    else if (wardrobe.top === 'tunic_emerald_druid') topColor = '#15803d';
+
+    ctx.fillStyle = topColor;
     ctx.fillRect(px + 12, py + 16, 16, 12);
-    ctx.fillStyle = '#fed7aa';
+
+    // 7. Head & Skin Tone
+    const skinTone = charProfile.skin_tone || '#fed7aa';
+    ctx.fillStyle = skinTone;
     ctx.fillRect(px + 13, py + 6, 14, 12);
 
-    // Straw Hat
-    ctx.fillStyle = '#eab308';
-    ctx.fillRect(px + 8, py + 4, 24, 4);
-    ctx.fillRect(px + 12, py - 2, 16, 6);
+    // Ears
+    if (charProfile.appendages?.ears === 'ears_elven_long') {
+      ctx.fillStyle = skinTone;
+      ctx.fillRect(px + 9, py + 8, 4, 3);
+      ctx.fillRect(px + 27, py + 8, 4, 3);
+    } else if (charProfile.appendages?.ears === 'ears_beast_fluffy') {
+      ctx.fillStyle = charProfile.hair_color || '#d97706';
+      ctx.fillRect(px + 11, py + 1, 4, 5);
+      ctx.fillRect(px + 25, py + 1, 4, 5);
+    }
 
-    // Nameplate
+    // Facial Markings & Eyes
+    const eyeCol = charProfile.eye_color || '#2563eb';
+    ctx.fillStyle = eyeCol;
+    ctx.fillRect(px + 15, py + 10, 2, 2);
+    ctx.fillRect(px + 23, py + 10, 2, 2);
+
+    if (charProfile.facial_markings === 'mystic_rune') {
+      ctx.fillStyle = '#38bdf8';
+      ctx.fillRect(px + 19, py + 7, 2, 2);
+    } else if (charProfile.facial_markings === 'scar_cheek') {
+      ctx.fillStyle = '#991b1b';
+      ctx.fillRect(px + 23, py + 13, 3, 1);
+    }
+
+    // 8. Hair
+    const hairColor = charProfile.hair_color || '#78350f';
+    ctx.fillStyle = hairColor;
+    if (charProfile.hair_style === 'braided_long') {
+      ctx.fillRect(px + 11, py + 3, 18, 5);
+      ctx.fillRect(px + 10, py + 6, 3, 14);
+      ctx.fillRect(px + 27, py + 6, 3, 14);
+    } else if (charProfile.hair_style === 'spiky') {
+      ctx.fillRect(px + 11, py + 2, 18, 6);
+      ctx.fillRect(px + 13, py - 1, 4, 4);
+      ctx.fillRect(px + 23, py - 1, 4, 4);
+    } else {
+      ctx.fillRect(px + 11, py + 3, 18, 5);
+    }
+
+    // 9. Horns
+    if (charProfile.appendages?.horns && charProfile.appendages.horns !== 'none') {
+      ctx.fillStyle = charProfile.appendages.horns === 'horns_crystal' ? '#38bdf8' : '#78350f';
+      ctx.fillRect(px + 12, py - 3, 3, 6);
+      ctx.fillRect(px + 25, py - 3, 3, 6);
+    }
+
+    // 10. Headwear
+    if (wardrobe.headwear === 'hat_straw') {
+      ctx.fillStyle = '#eab308';
+      ctx.fillRect(px + 8, py + 4, 24, 4);
+      ctx.fillRect(px + 12, py - 2, 16, 6);
+    } else if (wardrobe.headwear === 'helm_iron') {
+      ctx.fillStyle = '#475569';
+      ctx.fillRect(px + 11, py + 1, 18, 10);
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(px + 14, py + 8, 12, 2);
+    } else if (wardrobe.headwear === 'crown_laurel') {
+      ctx.fillStyle = '#f59e0b';
+      ctx.fillRect(px + 12, py + 3, 16, 3);
+    } else if (wardrobe.headwear === 'hat_beret_merchant') {
+      ctx.fillStyle = '#1e3a8a';
+      ctx.fillRect(px + 10, py - 1, 20, 6);
+      ctx.fillStyle = '#f59e0b';
+      ctx.fillRect(px + 24, py - 4, 3, 5);
+    }
+
+    // Nameplate with Race
+    const playerName = gameState?.player?.name || 'Kamu';
+    const raceId = charProfile.race || 'human';
+    const raceShort = raceId === 'human' ? '' : ` [${raceId.substring(0, 3).toUpperCase()}]`;
     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-    ctx.fillRect(px + 2, py - 12, 36, 13);
+    ctx.fillRect(px - 4, py - 14, 48, 13);
     ctx.fillStyle = '#fde047';
     ctx.font = 'bold 8px sans-serif';
-    ctx.fillText('Kamu', px + 10, py - 3);
+    ctx.fillText(`${playerName}${raceShort}`, px, py - 5);
 
     if (localPlayerChatBubble) {
       ctx.fillStyle = '#ffffff';
-      ctx.fillRect(px - 10, py - 28, 60, 16);
+      ctx.fillRect(px - 10, py - 30, 60, 16);
       ctx.fillStyle = '#0f172a';
-      ctx.fillText(localPlayerChatBubble, px - 6, py - 16);
+      ctx.fillText(localPlayerChatBubble, px - 6, py - 18);
     }
   };
 
