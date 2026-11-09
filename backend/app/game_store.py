@@ -1,5 +1,7 @@
 import datetime
 import random
+import hashlib
+import json
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel
 
@@ -63,6 +65,8 @@ class GameSave(BaseModel):
     slot_id: int
     save_name: str
     saved_at: str
+    version: Optional[str] = "2.0.0"
+    checksum: Optional[str] = None
     player: Dict[str, Any]
     world: Dict[str, Any]
     farm_grid: List[List[Dict[str, Any]]]
@@ -74,6 +78,9 @@ class GameSave(BaseModel):
     completed_npc_quests: Optional[List[str]] = []
     storyline_unlocked: Optional[List[str]] = ["chap_prologue"]
     shipping_bin: List[Dict[str, Any]]
+    civilization: Optional[Dict[str, Any]] = None
+    market: Optional[Dict[str, Any]] = None
+    living_npcs: Optional[Dict[str, Any]] = None
 
 # Comprehensive Item Catalog
 ITEMS_DATABASE: Dict[str, Item] = {
@@ -684,13 +691,81 @@ class EvergreenGameEngine:
             ],
             completed_npc_quests=[],
             storyline_unlocked=["chap_prologue", "chap_01"],
-            shipping_bin=[]
+            shipping_bin=[],
+            version="2.0.0",
+            checksum="genesis_verified",
+            civilization={
+                "current_era": "medieval",
+                "prosperity_score": 450,
+                "population_count": 38,
+                "layers": {
+                    "population": {"score": 82, "label": "Stabil & Bahagia", "metric": "38 Jiwa"},
+                    "economy": {"score": 75, "label": "Perdagangan Lancar", "metric": "Kas Pasar 4,500 G"},
+                    "infrastructure": {"score": 68, "label": "Jalan Setapak Baik", "metric": "Cakupan Air 70%"},
+                    "social": {"score": 88, "label": "Gotong Royong Guyub", "metric": "Keamanan 98%"},
+                    "governance": {"score": 80, "label": "Kepemimpinan Stabil", "metric": "Pajak 5%"},
+                    "environment": {"score": 92, "label": "Tanah & Hutan Subur", "metric": "Kualitas Udara 100%"},
+                    "culture": {"score": 78, "label": "Tradisi Leluhur Hidup", "metric": "Festival Siap"}
+                },
+                "businesses": [
+                    {"id": "biz_bakery", "name": "Toko Roti & Pastri Cedric", "owner": "Cedric", "revenue": 160, "status": "Aktif"},
+                    {"id": "biz_blacksmith", "name": "Bengkel Tempa Rowan", "owner": "Rowan", "revenue": 240, "status": "Aktif"},
+                    {"id": "biz_herbalist", "name": "Sanggar Botani Elara", "owner": "Elara", "revenue": 180, "status": "Aktif"},
+                    {"id": "biz_engineer", "name": "Laboratorium Riset Nessa", "owner": "Nessa", "revenue": 290, "status": "Aktif"}
+                ]
+            },
+            market={
+                "commodities": {
+                    "wood": {"name": "Kayu Rimba", "icon": "🪵", "base_price": 6, "min_price": 3, "max_price": 18, "current_price": 6, "supply": 140, "demand": 160},
+                    "stone": {"name": "Batu Gunung", "icon": "🪨", "base_price": 5, "min_price": 2, "max_price": 15, "current_price": 5, "supply": 180, "demand": 170},
+                    "wheat": {"name": "Gandum Emas", "icon": "🌾", "base_price": 8, "min_price": 4, "max_price": 22, "current_price": 9, "supply": 90, "demand": 150},
+                    "parsnip": {"name": "Wortel Parsnip", "icon": "🥕", "base_price": 12, "min_price": 6, "max_price": 30, "current_price": 12, "supply": 70, "demand": 110},
+                    "strawberry": {"name": "Stroberi Manis", "icon": "🍓", "base_price": 26, "min_price": 14, "max_price": 65, "current_price": 28, "supply": 40, "demand": 95},
+                    "iron_ore": {"name": "Bijih Besi Tempa", "icon": "⛏️", "base_price": 22, "min_price": 12, "max_price": 55, "current_price": 24, "supply": 35, "demand": 80},
+                    "bread": {"name": "Roti Gandum Hangat", "icon": "🍞", "base_price": 16, "min_price": 8, "max_price": 38, "current_price": 16, "supply": 50, "demand": 85},
+                    "fish": {"name": "Ikan Danau Aether", "icon": "🐟", "base_price": 15, "min_price": 8, "max_price": 40, "current_price": 15, "supply": 45, "demand": 70}
+                }
+            }
         )
         self.save_slots[1] = default_save
 
     def get_save(self, slot_id: int) -> Optional[GameSave]:
         save = self.save_slots.get(slot_id)
         if save:
+            if not getattr(save, "civilization", None):
+                save.civilization = {
+                    "current_era": "medieval",
+                    "prosperity_score": 450,
+                    "population_count": 38,
+                    "layers": {
+                        "population": {"score": 82, "label": "Stabil & Bahagia", "metric": "38 Jiwa"},
+                        "economy": {"score": 75, "label": "Perdagangan Lancar", "metric": "Kas Pasar 4,500 G"},
+                        "infrastructure": {"score": 68, "label": "Jalan Setapak Baik", "metric": "Cakupan Air 70%"},
+                        "social": {"score": 88, "label": "Gotong Royong Guyub", "metric": "Keamanan 98%"},
+                        "governance": {"score": 80, "label": "Kepemimpinan Stabil", "metric": "Pajak 5%"},
+                        "environment": {"score": 92, "label": "Tanah & Hutan Subur", "metric": "Kualitas Udara 100%"},
+                        "culture": {"score": 78, "label": "Tradisi Leluhur Hidup", "metric": "Festival Siap"}
+                    },
+                    "businesses": [
+                        {"id": "biz_bakery", "name": "Toko Roti & Pastri Cedric", "owner": "Cedric", "revenue": 160, "status": "Aktif"},
+                        {"id": "biz_blacksmith", "name": "Bengkel Tempa Rowan", "owner": "Rowan", "revenue": 240, "status": "Aktif"},
+                        {"id": "biz_herbalist", "name": "Sanggar Botani Elara", "owner": "Elara", "revenue": 180, "status": "Aktif"},
+                        {"id": "biz_engineer", "name": "Laboratorium Riset Nessa", "owner": "Nessa", "revenue": 290, "status": "Aktif"}
+                    ]
+                }
+            if not getattr(save, "market", None):
+                save.market = {
+                    "commodities": {
+                        "wood": {"name": "Kayu Rimba", "icon": "🪵", "base_price": 6, "min_price": 3, "max_price": 18, "current_price": 6, "supply": 140, "demand": 160},
+                        "stone": {"name": "Batu Gunung", "icon": "🪨", "base_price": 5, "min_price": 2, "max_price": 15, "current_price": 5, "supply": 180, "demand": 170},
+                        "wheat": {"name": "Gandum Emas", "icon": "🌾", "base_price": 8, "min_price": 4, "max_price": 22, "current_price": 9, "supply": 90, "demand": 150},
+                        "parsnip": {"name": "Wortel Parsnip", "icon": "🥕", "base_price": 12, "min_price": 6, "max_price": 30, "current_price": 12, "supply": 70, "demand": 110},
+                        "strawberry": {"name": "Stroberi Manis", "icon": "🍓", "base_price": 26, "min_price": 14, "max_price": 65, "current_price": 28, "supply": 40, "demand": 95},
+                        "iron_ore": {"name": "Bijih Besi Tempa", "icon": "⛏️", "base_price": 22, "min_price": 12, "max_price": 55, "current_price": 24, "supply": 35, "demand": 80},
+                        "bread": {"name": "Roti Gandum Hangat", "icon": "🍞", "base_price": 16, "min_price": 8, "max_price": 38, "current_price": 16, "supply": 50, "demand": 85},
+                        "fish": {"name": "Ikan Danau Aether", "icon": "🐟", "base_price": 15, "min_price": 8, "max_price": 40, "current_price": 15, "supply": 45, "demand": 70}
+                    }
+                }
             if "tractor" not in save.player or not save.player.get("tractor"):
                 save.player["tractor"] = {
                     "owned": True,
@@ -757,10 +832,16 @@ class EvergreenGameEngine:
         return save
 
     def save_game(self, slot_id: int, payload: Dict[str, Any]) -> GameSave:
+        # Checksum validation
+        raw_json = json.dumps(payload, sort_keys=True, default=str).encode('utf-8')
+        calc_checksum = hashlib.sha256(raw_json).hexdigest()
+
         save_obj = GameSave(
             slot_id=slot_id,
             save_name=payload.get("save_name", f"Slot {slot_id}"),
             saved_at=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            version="2.0.0",
+            checksum=calc_checksum,
             player=payload["player"],
             world=payload["world"],
             farm_grid=payload["farm_grid"],
@@ -771,7 +852,10 @@ class EvergreenGameEngine:
             active_npc_quests=payload.get("active_npc_quests", []),
             completed_npc_quests=payload.get("completed_npc_quests", []),
             storyline_unlocked=payload.get("storyline_unlocked", ["chap_prologue"]),
-            shipping_bin=payload.get("shipping_bin", [])
+            shipping_bin=payload.get("shipping_bin", []),
+            civilization=payload.get("civilization", self.save_slots.get(slot_id, self.save_slots.get(1)).civilization if self.save_slots.get(1) else None),
+            market=payload.get("market", self.save_slots.get(slot_id, self.save_slots.get(1)).market if self.save_slots.get(1) else None),
+            living_npcs=payload.get("living_npcs", None)
         )
         self.save_slots[slot_id] = save_obj
         return save_obj

@@ -24,6 +24,7 @@ export default function HUD({
   onOpenStoryline,
   onOpenQuestLog,
   onOpenAffection,
+  onOpenCivilization,
   onOpenCharacterStudio,
   onToggleLandscapePainter,
   isLandscapePainterActive = false,
@@ -271,6 +272,15 @@ export default function HUD({
         >
           <span>🎬</span>
           <span>{t.hud.storyline || 'Cerita'}</span>
+        </button>
+
+        <button
+          onClick={() => { sounds.playClick(); onOpenCivilization && onOpenCivilization(); }}
+          title="Pusat Kendali Peradaban & Pasar [C]"
+          className="bg-amber-950/90 hover:bg-amber-900 text-amber-300 border border-amber-500 px-2 py-1 rounded-md text-xs font-semibold transition flex items-center space-x-1 ring-1 ring-amber-400/50"
+        >
+          <span>🏛️</span>
+          <span>Peradaban [C]</span>
         </button>
 
         <button

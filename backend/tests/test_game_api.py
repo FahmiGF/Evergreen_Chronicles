@@ -296,5 +296,86 @@ def test_landscape_painter_and_brushes():
     assert data["success"] is True
     assert data["tile"]["tile_type"] == "sand"
 
+def test_civilization_status_and_layers():
+    res = client.get("/api/v1/game/civilization/status/1")
+    assert res.status_code == 200
+    data = res.json()
+    assert "civilization" in data
+    assert "current_era" in data
+    assert "all_eras" in data
+    assert len(data["all_eras"]) == 4
+    civ = data["civilization"]
+    assert "layers" in civ
+    layers = civ["layers"]
+    assert "population" in layers
+    assert "economy" in layers
+    assert "infrastructure" in layers
+    assert "social" in layers
+    assert "governance" in layers
+    assert "environment" in layers
+    assert "culture" in layers
+
+def test_dynamic_market_and_trading():
+    res = client.get("/api/v1/game/economy/market/1")
+    assert res.status_code == 200
+    data = res.json()
+    assert "commodities" in data
+    assert "wood" in data["commodities"]
+    assert "wheat" in data["commodities"]
+    assert data["commodities"]["wheat"]["current_price"] >= data["commodities"]["wheat"]["min_price"]
+
+    # Test Buying Commodity
+    buy_res = client.post("/api/v1/game/economy/trade/1", json={"action": "buy", "commodity_id": "wood", "amount": 2})
+    assert buy_res.status_code == 200
+    buy_data = buy_res.json()
+    assert buy_data["success"] is True
+
+    # Test Selling Commodity
+    sell_res = client.post("/api/v1/game/economy/trade/1", json={"action": "sell", "commodity_id": "wheat", "amount": 1})
+    assert sell_res.status_code == 200
+    sell_data = sell_res.json()
+    assert sell_data["success"] is True
+
+def test_living_npcs_and_interaction():
+    res = client.get("/api/v1/game/npcs/living/1")
+    assert res.status_code == 200
+    data = res.json()
+    assert "npcs" in data
+    assert len(data["npcs"]) >= 4
+    elara = next((n for n in data["npcs"] if n["id"] == "npc_elara"), None)
+    assert elara is not None
+    assert "current_schedule" in elara
+    assert "relationships" in elara
+    assert "trust" in elara["relationships"]
+    assert "friendship" in elara["relationships"]
+
+    # Test Interaction
+    interact_res = client.post("/api/v1/game/npcs/npc_elara/interact/1", json={"interaction_type": "chat"})
+    assert interact_res.status_code == 200
+    interact_data = interact_res.json()
+    assert interact_data["success"] is True
+    assert len(interact_data["speech"]) > 0
+
+def test_dynamic_civilization_quests():
+    res = client.get("/api/v1/game/civilization/quests/1")
+    assert res.status_code == 200
+    data = res.json()
+    assert "quests" in data
+    assert len(data["quests"]) > 0
+
+def test_save_checksum_and_integrity():
+    save_res = client.get("/api/v1/game/save/1")
+    assert save_res.status_code == 200
+    save_data = save_res.json()
+    assert "version" in save_data
+    assert save_data["version"] == "2.0.0"
+
+    # Save mutated state and check checksum returned
+    post_res = client.post("/api/v1/game/save/1", json=save_data)
+    assert post_res.status_code == 200
+    saved = post_res.json()
+    assert saved.get("checksum") is not None
+
+
 
 

@@ -22,6 +22,7 @@ import StorylineModal from './components/StorylineModal';
 import BlueprintDock from './components/BlueprintDock';
 import CharacterStudioModal from './components/CharacterStudioModal';
 import LandscapePainterDock from './components/LandscapePainterDock';
+import CivilizationDashboardModal from './components/CivilizationDashboardModal';
 import { sounds } from './game/SoundFx';
 import { multiplayer } from './game/MultiplayerManager';
 
@@ -62,6 +63,7 @@ export default function App() {
   const [storylineOpen, setStorylineOpen] = useState(false);
   const [characterStudioOpen, setCharacterStudioOpen] = useState(false);
   const [landscapePainterOpen, setLandscapePainterOpen] = useState(false);
+  const [civDashboardOpen, setCivDashboardOpen] = useState(false);
   const [activeLandscapeBrush, setActiveLandscapeBrush] = useState('grass');
   const [landscapeBrushRadius, setLandscapeBrushRadius] = useState(1);
   const [currentZoneId, setCurrentZoneId] = useState('zone_farm');
@@ -199,7 +201,12 @@ export default function App() {
         setInventoryOpen((prev) => !prev);
       } else if (e.code === 'KeyC') {
         e.preventDefault();
+        setCivDashboardOpen((prev) => !prev);
+        sounds.playClick();
+      } else if (e.code === 'KeyX') {
+        e.preventDefault();
         setCraftingOpen((prev) => !prev);
+        sounds.playClick();
       } else if (e.code === 'KeyK') {
         e.preventDefault();
         setCookingOpen((prev) => !prev);
@@ -259,6 +266,7 @@ export default function App() {
         setStorylineOpen(false);
         setCharacterStudioOpen(false);
         setLandscapePainterOpen(false);
+        setCivDashboardOpen(false);
         setBedOpen(false);
         setGuideOpen(false);
         setRosterOpen(false);
@@ -348,6 +356,7 @@ export default function App() {
         onOpenQuestLog={() => setQuestLogOpen(true)}
         onOpenAffection={() => setAffectionOpen(true)}
         onOpenStoryline={() => setStorylineOpen(true)}
+        onOpenCivilization={() => setCivDashboardOpen(true)}
         onOpenCharacterStudio={() => setCharacterStudioOpen(true)}
         onToggleLandscapePainter={() => setLandscapePainterOpen((prev) => !prev)}
         isLandscapePainterActive={landscapePainterOpen}
@@ -592,6 +601,15 @@ export default function App() {
         onSelectBrush={setActiveLandscapeBrush}
         brushRadius={landscapeBrushRadius}
         onChangeRadius={setLandscapeBrushRadius}
+      />
+
+      {/* CIVILIZATION & LIVING WORLD DASHBOARD */}
+      <CivilizationDashboardModal
+        isOpen={civDashboardOpen}
+        onClose={() => setCivDashboardOpen(false)}
+        gameState={gameState}
+        setGameState={setGameState}
+        showNotification={showNotification}
       />
 
       {/* 5. TOAST NOTIFICATION */}

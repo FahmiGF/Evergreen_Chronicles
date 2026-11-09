@@ -102,13 +102,27 @@ export default function DialogueBox({
     setLoadingTopic(true);
 
     try {
-      const res = await fetch('/api/v1/game/npc-dialogue-ai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ npc_id: currentNpc.id, topic: topicKey })
-      });
-      const data = await res.json();
-      const textToSpeak = data.spoken_text || 'Terima kasih telah bertanya!';
+      let textToSpeak = 'Terima kasih telah bertanya!';
+      if (topicKey === 'routine' || topicKey === 'gossip') {
+        const res = await fetch(`/api/v1/game/npcs/${currentNpc.id}/interact/1`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ interaction_type: topicKey })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          textToSpeak = data.speech || textToSpeak;
+        }
+      } else {
+        const res = await fetch('/api/v1/game/npc-dialogue-ai', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ npc_id: currentNpc.id, topic: topicKey })
+        });
+        const data = await res.json();
+        textToSpeak = data.spoken_text || textToSpeak;
+      }
+
       setCurrentDialogueText(textToSpeak);
 
       voiceAi.speak(
@@ -226,9 +240,11 @@ export default function DialogueBox({
 
   const topics = [
     { key: 'work', label: '🛠️ Sedang sibuk apa hari ini?' },
+    { key: 'routine', label: '⏰ Jadwal & kegiatan jam ini' },
+    { key: 'gossip', label: '📰 Kabar pasar & kemakmuran kota' },
     { key: 'advice', label: '💡 Minta tips petualangan & bertani' },
     { key: 'aether_lore', label: '🔮 Rahasia Kristal Aether' },
-    { key: 'era_opinion', label: '🏛️ Pendapat kemajuan desa kita' }
+    { key: 'era_opinion', label: '🏛️ Pendapat kemajuan era peradaban' }
   ];
 
   return (

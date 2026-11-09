@@ -28,6 +28,13 @@ from app.game_store import (
 )
 from app.npc_engine import npc_manager
 from app.websocket_manager import world_hub
+from app.civilization_engine import (
+    civ_engine,
+    CIVILIZATION_ERAS,
+    DEFAULT_MARKET_COMMODITIES,
+    TOWN_BUSINESSES,
+    LIVING_NPCS_BRAIN
+)
 
 app = FastAPI(
     title="Evergreen Chronicles Online Engine & Multiplayer Hub",
@@ -878,7 +885,12 @@ def load_game(slot_id: int):
 @app.post("/api/v1/game/save/{slot_id}")
 def save_game(slot_id: int, payload: Dict[str, Any] = Body(...)):
     saved_obj = game_store.save_game(slot_id, payload)
-    return {"message": f"Game successfully saved to Slot {slot_id}", "saved_at": saved_obj.saved_at}
+    return {
+        "message": f"Game successfully saved to Slot {slot_id}",
+        "saved_at": saved_obj.saved_at,
+        "checksum": saved_obj.checksum,
+        "version": saved_obj.version
+    }
 
 @app.post("/api/v1/game/sleep/{slot_id}")
 def sleep_advance_day(slot_id: int):
@@ -1017,6 +1029,293 @@ def pet_animal(slot_id: int, req: PetAnimalRequest):
         "message": msg,
         "gold_earned": earned_gold,
         "current_gold": player["gold"]
+    }
+
+# ==================== CIVILIZATION & LIVING NPC SIMULATION ====================
+
+@app.get("/api/v1/game/civilization/status/{slot_id}")
+def get_civilization_status(slot_id: int):
+    """Retrieve full 7-layer civilization simulation, Era progression, and business stats."""
+    save = game_store.get_save(slot_id)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+
+    civ = getattr(save, "civilization", {}) or {}
+    cur_era_id = civ.get("current_era", "medieval")
+    cur_meta = CIVILIZATION_ERAS.get(cur_era_id, CIVILIZATION_ERAS["medieval"])
+    next_era_id = cur_meta.get("next_era")
+    next_meta = CIVILIZATION_ERAS.get(next_era_id) if next_era_id else None
+
+    return {
+        "civilization": civ,
+        "current_era": cur_meta,
+        "next_era": next_meta,
+        "all_eras": list(CIVILIZATION_ERAS.values()),
+        "businesses": civ.get("businesses", TOWN_BUSINESSES),
+        "prosperity_score": civ.get("prosperity_score", 450)
+    }
+
+@app.post("/api/v1/game/civilization/advance-era/{slot_id}")
+async def advance_civilization_era_endpoint(slot_id: int):
+    """Attempt to advance the world to the next civilization era."""
+    save = game_store.get_save(slot_id)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+
+    save_dict = save.model_dump()
+    result = civ_engine.advance_civilization_era(save_dict)
+    if not result.get("success"):
+        raise HTTPException(status_code=400, detail=result.get("message"))
+
+    # Update in-memory store
+    save.civilization = save_dict["civilization"]
+    save.player["gold"] = save_dict["player"]["gold"]
+
+    # Broadcast event to multiplayer
+    await world_hub.broadcast_world_action("advance_era", 0, 0, {
+        "era": save.civilization["current_era"],
+        "name": result["new_era"]["name"]
+    })
+
+    return {
+        "success": True,
+        "message": result["message"],
+        "civilization": save.civilization,
+        "new_gold": save.player["gold"]
+    }
+
+@app.get("/api/v1/game/economy/market/{slot_id}")
+def get_market_status(slot_id: int):
+    """Retrieve dynamic commodities with real-time supply, demand, and prices."""
+    save = game_store.get_save(slot_id)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+
+    market = getattr(save, "market", {}) or {}
+    commodities = market.get("commodities", DEFAULT_MARKET_COMMODITIES)
+
+    # Calculate real-time dynamic prices
+    calculated = {}
+    for cid, comm in commodities.items():
+        price = civ_engine.calculate_market_price(
+            comm.get("base_price", 10),
+            comm.get("supply", 100),
+            comm.get("demand", 100),
+            comm.get("min_price", 2),
+            comm.get("max_price", 50)
+        )
+        calculated[cid] = {**comm, "current_price": price}
+
+    return {
+        "commodities": calculated,
+        "businesses": TOWN_BUSINESSES
+    }
+
+@app.post("/api/v1/game/economy/trade/{slot_id}")
+def trade_commodity(slot_id: int, payload: Dict[str, Any] = Body(...)):
+    """Buy or sell commodities dynamically adjusting market supply and prices."""
+    save = game_store.get_save(slot_id)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+
+    action = payload.get("action")  # "buy" or "sell"
+    cid = payload.get("commodity_id")
+    amount = max(1, int(payload.get("amount", 1)))
+
+    market = save.market.setdefault("commodities", DEFAULT_MARKET_COMMODITIES)
+    if cid not in market:
+        raise HTTPException(status_code=404, detail=f"Commodity '{cid}' not found in market")
+
+    comm = market[cid]
+    unit_price = civ_engine.calculate_market_price(
+        comm["base_price"], comm["supply"], comm["demand"], comm["min_price"], comm["max_price"]
+    )
+    total_cost = unit_price * amount
+    player = save.player
+    inventory = player.get("inventory", [])
+
+    if action == "buy":
+        if player["gold"] < total_cost:
+            raise HTTPException(status_code=400, detail=f"Emas tidak cukup (butuh {total_cost:,} G, dimiliki {player['gold']:,} G)")
+        player["gold"] -= total_cost
+        comm["supply"] = max(5, comm["supply"] - amount)
+        comm["demand"] += int(round(amount * 0.8))
+
+        # Add item to player inventory
+        item_id_map = {"wood": "mat_wood", "stone": "mat_stone", "wheat": "crop_wheat", "parsnip": "crop_parsnip", "strawberry": "crop_strawberry", "iron_ore": "mat_iron_ore", "bread": "food_bread", "fish": "item_fish_parsnip"}
+        inv_item_id = item_id_map.get(cid, f"item_{cid}")
+        for slot in inventory:
+            if slot and slot.get("item_id") == inv_item_id:
+                slot["count"] += amount
+                break
+        else:
+            for i, slot in enumerate(inventory):
+                if slot is None:
+                    inventory[i] = {"item_id": inv_item_id, "count": amount}
+                    break
+
+        msg = f"Membeli {amount}x {comm['name']} seharga {total_cost:,} G"
+
+    elif action == "sell":
+        player["gold"] += total_cost
+        comm["supply"] += amount
+        comm["demand"] = max(10, comm["demand"] - int(round(amount * 0.5)))
+        msg = f"Menjual {amount}x {comm['name']} memperoleh {total_cost:,} G"
+    else:
+        raise HTTPException(status_code=400, detail="Invalid trade action ('buy' or 'sell' required)")
+
+    # Recalculate price
+    new_price = civ_engine.calculate_market_price(
+        comm["base_price"], comm["supply"], comm["demand"], comm["min_price"], comm["max_price"]
+    )
+    comm["current_price"] = new_price
+
+    return {
+        "success": True,
+        "message": msg,
+        "total_gold": player["gold"],
+        "commodity": {**comm, "current_price": new_price}
+    }
+
+@app.get("/api/v1/game/npcs/living/{slot_id}")
+def get_living_npcs_status(slot_id: int):
+    """Retrieve living NPCs, active daily schedules, memories, and multi-dimensional relationships."""
+    save = game_store.get_save(slot_id)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+
+    cur_hour = save.world.get("time_hour", 8)
+    living_roster = []
+
+    for npc_id, npc_data in LIVING_NPCS_BRAIN.items():
+        schedule = civ_engine.get_current_npc_schedule(npc_id, cur_hour)
+        living_roster.append({
+            "id": npc_id,
+            "name": npc_data["name"],
+            "race": npc_data["race"],
+            "title": npc_data["title"],
+            "avatar_icon": npc_data["avatar_icon"],
+            "personality": npc_data["personality"],
+            "workplace": npc_data["workplace"],
+            "home": npc_data["home"],
+            "relationships": npc_data["relationships"],
+            "current_schedule": schedule,
+            "memories": npc_data.get("memories", [])
+        })
+
+    return {
+        "hour": cur_hour,
+        "npcs": living_roster
+    }
+
+@app.post("/api/v1/game/npcs/{npc_id}/interact/{slot_id}")
+def interact_with_npc(slot_id: int, npc_id: str, payload: Dict[str, Any] = Body(...)):
+    """Deep interaction with NPC: casual chat, routine inquiry, town gossip, or gift giving."""
+    save = game_store.get_save(slot_id)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+
+    npc_meta = LIVING_NPCS_BRAIN.get(npc_id)
+    if not npc_meta:
+        raise HTTPException(status_code=404, detail=f"NPC '{npc_id}' not found")
+
+    interaction_type = payload.get("interaction_type", "chat")
+    weather = save.world.get("weather", "Sunny")
+    cur_hour = save.world.get("time_hour", 8)
+    schedule = civ_engine.get_current_npc_schedule(npc_id, cur_hour)
+
+    if interaction_type == "routine":
+        speech = f"Saat ini aku sedang di {schedule['location']} ({schedule['activity']}). Jam {schedule['end']}:00 nanti aku akan berpindah kegiatan."
+        gain_trust = 2
+    elif interaction_type == "gossip":
+        civ = save.civilization or {}
+        speech = f"Kudengar kemakmuran lembah kita kini bernilai {civ.get('prosperity_score', 450)} poin. Para perajin dan pedagang sangat bersemangat!"
+        gain_trust = 3
+    elif interaction_type == "gift":
+        speech = npc_meta.get("dialogues", {}).get("gift_thanks", "Wah, hadiah ini sungguh berharga! Terima kasih banyak, sahabat!")
+        gain_trust = 6
+    else:
+        # Contextual chat
+        if weather == "Rainy":
+            speech = npc_meta.get("dialogues", {}).get("weather_rain", npc_meta.get("dialogues", {}).get("casual", ""))
+        else:
+            speech = npc_meta.get("dialogues", {}).get("casual", "Senang berjumpa denganmu lagi di lembah yang damai ini.")
+        gain_trust = 2
+
+    # Boost relationship
+    npc_meta["relationships"]["trust"] = min(100, npc_meta["relationships"]["trust"] + gain_trust)
+    npc_meta["relationships"]["friendship"] = min(100, npc_meta["relationships"]["friendship"] + 1)
+
+    return {
+        "success": True,
+        "npc_name": npc_meta["name"],
+        "speech": speech,
+        "relationships": npc_meta["relationships"],
+        "active_schedule": schedule
+    }
+
+@app.get("/api/v1/game/civilization/quests/{slot_id}")
+def get_civilization_quests(slot_id: int):
+    """Retrieve dynamic procedural quests based on actual world shortages."""
+    save = game_store.get_save(slot_id)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+
+    quests = civ_engine.generate_dynamic_quests(save.model_dump())
+    return {
+        "quests": quests
+    }
+
+@app.post("/api/v1/game/civilization/quests/complete/{slot_id}")
+def complete_civilization_quest(slot_id: int, quest_id: str = Body(..., embed=True)):
+    """Complete a dynamic town quest, delivering requested materials and receiving rewards."""
+    save = game_store.get_save(slot_id)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+
+    quests = civ_engine.generate_dynamic_quests(save.model_dump())
+    target_quest = next((q for q in quests if q["id"] == quest_id), None)
+    if not target_quest:
+        raise HTTPException(status_code=404, detail=f"Quest '{quest_id}' not found")
+
+    player = save.player
+    req_item = target_quest["required_item"]
+    req_amt = target_quest["required_amount"]
+
+    # Check inventory
+    inventory = player.get("inventory", [])
+    found_count = 0
+    for slot in inventory:
+        if slot and slot.get("item_id") == req_item:
+            found_count += slot.get("count", 1)
+
+    if found_count < req_amt:
+        raise HTTPException(status_code=400, detail=f"Bahan tidak cukup (butuh {req_amt}x {req_item}, dimiliki {found_count})")
+
+    # Deduct items
+    remaining = req_amt
+    for slot in inventory:
+        if slot and slot.get("item_id") == req_item:
+            deduct = min(remaining, slot["count"])
+            slot["count"] -= deduct
+            remaining -= deduct
+            if slot["count"] <= 0:
+                slot.clear()
+            if remaining <= 0:
+                break
+
+    # Award gold and prosperity
+    reward_gold = target_quest.get("reward_gold", 100)
+    reward_pros = target_quest.get("reward_prosperity", 20)
+    player["gold"] += reward_gold
+    save.civilization["prosperity_score"] = save.civilization.get("prosperity_score", 450) + reward_pros
+
+    return {
+        "success": True,
+        "message": f"🎉 Misi '{target_quest['title']}' Selesai! (+{reward_gold} G, +{reward_pros} Kemakmuran)",
+        "gold_earned": reward_gold,
+        "current_gold": player["gold"],
+        "prosperity_score": save.civilization["prosperity_score"]
     }
 
 # ==================== REAL-TIME MULTIPLAYER WEBSOCKET ====================
