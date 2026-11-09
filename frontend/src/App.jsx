@@ -4,12 +4,17 @@ import Quickbar from './components/Quickbar';
 import GameCanvas from './game/GameCanvas';
 import InventoryModal from './components/InventoryModal';
 import CraftingModal from './components/CraftingModal';
+import CookingModal from './components/CookingModal';
+import FishingModal from './components/FishingModal';
 import TechTreeModal from './components/TechTreeModal';
 import DungeonCombatModal from './components/DungeonCombatModal';
 import DialogueBox from './components/DialogueBox';
 import ShippingSummaryModal from './components/ShippingSummaryModal';
 import ControlsGuideModal from './components/ControlsGuideModal';
+import RosterDrawer from './components/RosterDrawer';
+import OnlineChat from './components/OnlineChat';
 import { sounds } from './game/SoundFx';
+import { multiplayer } from './game/MultiplayerManager';
 
 export default function App() {
   const [gameState, setGameState] = useState(null);
@@ -18,13 +23,21 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
 
+  // Multiplayer stats
+  const [onlineCount, setOnlineCount] = useState(1);
+  const [pingMs, setPingMs] = useState(5);
+  const [localChatBubble, setLocalChatBubble] = useState(null);
+
   // Modals state
   const [inventoryOpen, setInventoryOpen] = useState(false);
   const [craftingOpen, setCraftingOpen] = useState(false);
+  const [cookingOpen, setCookingOpen] = useState(false);
+  const [fishingOpen, setFishingOpen] = useState(false);
   const [techTreeOpen, setTechTreeOpen] = useState(false);
   const [dungeonOpen, setDungeonOpen] = useState(false);
   const [bedOpen, setBedOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
+  const [rosterOpen, setRosterOpen] = useState(false);
   const [activeDialogueNpc, setActiveDialogueNpc] = useState(null);
 
   // Toast notification
@@ -42,7 +55,7 @@ export default function App() {
     setIsMuted(muted);
   };
 
-  // Initialize Data from Backend
+  // Initialize Game Data & Multiplayer
   useEffect(() => {
     async function initGameData() {
       try {
@@ -60,8 +73,10 @@ export default function App() {
           setItemCatalog(itemsData);
           setCraftingRecipes(recipesData);
           setGameState(saveData);
-        } else {
-          console.error('Failed to fetch initial game data');
+
+          // Connect to Multiplayer WebSocket
+          const playerName = saveData.player?.name || 'Fahmi';
+          multiplayer.connect(playerName, '#3b82f6');
         }
       } catch (err) {
         console.error('Error connecting to backend engine:', err);
@@ -71,6 +86,17 @@ export default function App() {
     }
 
     initGameData();
+
+    // Subscribe to multiplayer events
+    const unsub = multiplayer.subscribe((ev) => {
+      if (ev.type === 'roster_update') {
+        setOnlineCount((ev.players?.length || 0) + 1);
+      } else if (ev.type === 'ping_update') {
+        setPingMs(ev.ping);
+      }
+    });
+
+    return () => unsub();
   }, []);
 
   // Periodic Auto-Save
@@ -94,7 +120,6 @@ export default function App() {
   // Global Keyboard Shortcuts
   useEffect(() => {
     const handleGlobalKeys = (e) => {
-      // Don't trigger if typing in an input
       if (['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) return;
 
       if (e.code === 'KeyE') {
@@ -103,6 +128,12 @@ export default function App() {
       } else if (e.code === 'KeyC') {
         e.preventDefault();
         setCraftingOpen((prev) => !prev);
+      } else if (e.code === 'KeyK') {
+        e.preventDefault();
+        setCookingOpen((prev) => !prev);
+      } else if (e.code === 'KeyF') {
+        e.preventDefault();
+        setFishingOpen((prev) => !prev);
       } else if (e.code === 'KeyT') {
         e.preventDefault();
         setTechTreeOpen((prev) => !prev);
@@ -118,10 +149,13 @@ export default function App() {
       } else if (e.code === 'Escape') {
         setInventoryOpen(false);
         setCraftingOpen(false);
+        setCookingOpen(false);
+        setFishingOpen(false);
         setTechTreeOpen(false);
         setDungeonOpen(false);
         setBedOpen(false);
         setGuideOpen(false);
+        setRosterOpen(false);
         setActiveDialogueNpc(null);
       }
     };
@@ -129,6 +163,13 @@ export default function App() {
     window.addEventListener('keydown', handleGlobalKeys);
     return () => window.removeEventListener('keydown', handleGlobalKeys);
   }, []);
+
+  const handleSelfChat = (text) => {
+    setLocalChatBubble(text);
+    setTimeout(() => {
+      setLocalChatBubble(null);
+    }, 4500);
+  };
 
   const equippedSlot = gameState?.player?.inventory?.[gameState.player.equipped_index];
   const equippedItemMeta = equippedSlot ? itemCatalog[equippedSlot.item_id] : null;
@@ -138,10 +179,10 @@ export default function App() {
       <div className="h-screen w-screen flex flex-col items-center justify-center bg-stone-950 text-amber-200">
         <span className="text-5xl animate-bounce mb-3">🌲</span>
         <h1 className="text-2xl font-bold font-medieval tracking-wider">
-          EVERGREEN CHRONICLES
+          EVERGREEN CHRONICLES ONLINE
         </h1>
         <p className="text-xs text-stone-400 mt-2 font-mono">
-          Memuat dunia Aetherwyn & data pertanian...
+          Menghubungkan ke server desa Aetherwyn & sinkronisasi multiplayer...
         </p>
       </div>
     );
@@ -154,15 +195,20 @@ export default function App() {
         gameState={gameState}
         onOpenInventory={() => setInventoryOpen(true)}
         onOpenCrafting={() => setCraftingOpen(true)}
+        onOpenCooking={() => setCookingOpen(true)}
+        onOpenFishing={() => setFishingOpen(true)}
         onOpenTechTree={() => setTechTreeOpen(true)}
         onOpenDungeon={() => setDungeonOpen(true)}
         onOpenBed={() => setBedOpen(true)}
         onOpenGuide={() => setGuideOpen(true)}
+        onOpenRoster={() => setRosterOpen(true)}
+        onlineCount={onlineCount}
+        pingMs={pingMs}
         isMuted={isMuted}
         onToggleMute={handleToggleMute}
       />
 
-      {/* 2. MAIN GAME AREA */}
+      {/* 2. MAIN GAME CANVAS & ONLINE PLAYERS */}
       <main className="flex-1 flex items-center justify-center relative p-2 overflow-hidden">
         <GameCanvas
           gameState={gameState}
@@ -170,13 +216,16 @@ export default function App() {
           equippedItem={equippedItemMeta}
           onOpenShipping={() => setInventoryOpen(true)}
           onOpenBed={() => setBedOpen(true)}
+          onOpenFishing={() => setFishingOpen(true)}
+          onOpenNpcDialogue={(npc) => setActiveDialogueNpc(npc)}
           showNotification={showNotification}
+          localPlayerChatBubble={localChatBubble}
         />
 
-        {/* SIDEBAR: VILLAGE NPC QUICK CHAT */}
+        {/* SIDEBAR: LIVING VILLAGE NPCS */}
         <aside className="absolute right-4 top-4 hidden xl:flex flex-col space-y-2 bg-stone-900/80 backdrop-blur-md p-2 rounded-xl border border-amber-900/60 shadow-xl max-w-[160px]">
           <span className="text-[11px] font-bold text-amber-300 font-medieval px-1">
-            Penduduk Desa:
+            Warga Berkelana:
           </span>
           {gameState.npcs.map((npc) => (
             <button
@@ -201,6 +250,12 @@ export default function App() {
             </button>
           ))}
         </aside>
+
+        {/* BOTTOM-LEFT: ONLINE CHAT */}
+        <OnlineChat
+          playerName={gameState.player?.name || 'Kamu'}
+          onSelfChat={handleSelfChat}
+        />
       </main>
 
       {/* 3. BOTTOM QUICKBAR */}
@@ -238,6 +293,23 @@ export default function App() {
         setGameState={setGameState}
         recipes={craftingRecipes}
         itemCatalog={itemCatalog}
+        showNotification={showNotification}
+      />
+
+      <CookingModal
+        isOpen={cookingOpen}
+        onClose={() => setCookingOpen(false)}
+        gameState={gameState}
+        setGameState={setGameState}
+        itemCatalog={itemCatalog}
+        showNotification={showNotification}
+      />
+
+      <FishingModal
+        isOpen={fishingOpen}
+        onClose={() => setFishingOpen(false)}
+        gameState={gameState}
+        setGameState={setGameState}
         showNotification={showNotification}
       />
 
@@ -279,6 +351,13 @@ export default function App() {
       <ControlsGuideModal
         isOpen={guideOpen}
         onClose={() => setGuideOpen(false)}
+      />
+
+      <RosterDrawer
+        isOpen={rosterOpen}
+        onClose={() => setRosterOpen(false)}
+        pingMs={pingMs}
+        localPlayerName={gameState.player?.name}
       />
 
       {/* 5. TOAST NOTIFICATION */}
