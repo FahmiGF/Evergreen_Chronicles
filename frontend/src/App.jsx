@@ -14,6 +14,8 @@ import ShippingSummaryModal from './components/ShippingSummaryModal';
 import ControlsGuideModal from './components/ControlsGuideModal';
 import RosterDrawer from './components/RosterDrawer';
 import OnlineChat from './components/OnlineChat';
+import WorldMapModal from './components/WorldMapModal';
+import TutorialGuide from './components/TutorialGuide';
 import { sounds } from './game/SoundFx';
 import { multiplayer } from './game/MultiplayerManager';
 
@@ -42,6 +44,8 @@ export default function App() {
   const [bedOpen, setBedOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
   const [rosterOpen, setRosterOpen] = useState(false);
+  const [worldMapOpen, setWorldMapOpen] = useState(false);
+  const [currentZoneId, setCurrentZoneId] = useState('zone_farm');
   const [activeDialogueNpc, setActiveDialogueNpc] = useState(null);
 
   // Toast notification
@@ -146,6 +150,9 @@ export default function App() {
       } else if (e.code === 'KeyM') {
         e.preventDefault();
         setDungeonOpen((prev) => !prev);
+      } else if (e.code === 'KeyO') {
+        e.preventDefault();
+        setWorldMapOpen((prev) => !prev);
       } else if (e.code === 'KeyZ') {
         e.preventDefault();
         setBedOpen((prev) => !prev);
@@ -159,6 +166,7 @@ export default function App() {
         setFishingOpen(false);
         setTechTreeOpen(false);
         setDungeonOpen(false);
+        setWorldMapOpen(false);
         setBedOpen(false);
         setGuideOpen(false);
         setRosterOpen(false);
@@ -234,6 +242,7 @@ export default function App() {
         onOpenFishing={() => setFishingOpen(true)}
         onOpenTechTree={() => setTechTreeOpen(true)}
         onOpenDungeon={() => setDungeonOpen(true)}
+        onOpenWorldMap={() => setWorldMapOpen(true)}
         onOpenBed={() => setBedOpen(true)}
         onOpenGuide={() => setGuideOpen(true)}
         onOpenRoster={() => setRosterOpen(true)}
@@ -252,12 +261,21 @@ export default function App() {
           gameState={gameState}
           setGameState={setGameState}
           equippedItem={equippedItemMeta}
+          currentZone={currentZoneId}
           onOpenShipping={() => setInventoryOpen(true)}
           onOpenBed={() => setBedOpen(true)}
           onOpenFishing={() => setFishingOpen(true)}
           onOpenNpcDialogue={(npc) => setActiveDialogueNpc(npc)}
+          onOpenWorldMap={() => setWorldMapOpen(true)}
           showNotification={showNotification}
           localPlayerChatBubble={localChatBubble}
+        />
+
+        {/* TOP-RIGHT: NEWCOMER TUTORIAL GUIDE */}
+        <TutorialGuide
+          gameState={gameState}
+          setGameState={setGameState}
+          showNotification={showNotification}
         />
 
         {/* SIDEBAR: LIVING VILLAGE NPCS */}
@@ -389,6 +407,14 @@ export default function App() {
       <ControlsGuideModal
         isOpen={guideOpen}
         onClose={() => setGuideOpen(false)}
+      />
+
+      <WorldMapModal
+        isOpen={worldMapOpen}
+        onClose={() => setWorldMapOpen(false)}
+        currentZoneId={currentZoneId}
+        onTravelToZone={(zone) => setCurrentZoneId(zone.id)}
+        showNotification={showNotification}
       />
 
       <RosterDrawer

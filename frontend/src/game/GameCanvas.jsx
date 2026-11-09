@@ -10,10 +10,12 @@ export default function GameCanvas({
   gameState,
   setGameState,
   equippedItem,
+  currentZone = 'zone_farm',
   onOpenShipping,
   onOpenBed,
   onOpenFishing,
   onOpenNpcDialogue,
+  onOpenWorldMap,
   showNotification,
   localPlayerChatBubble
 }) {
@@ -60,7 +62,6 @@ export default function GameCanvas({
     }))
   );
 
-  // Input keys tracking
   const keysDown = useRef({});
 
   const addFloatingText = (text, x, y, color = '#fef08a') => {
@@ -253,18 +254,35 @@ export default function GameCanvas({
         ff.alpha = 0.3 + 0.5 * Math.sin(animTimer * 2 + ff.x);
       });
 
-      // 2. RENDER PIPELINE
+      // 2. RENDER PIPELINE BASED ON CURRENT ZONE
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      renderGround(ctx);
-      renderFarmhouse(ctx);
-      renderShippingBin(ctx);
-      renderWaterPond(ctx, animTimer);
-      renderPastureFence(ctx);
-      renderAnimals(ctx);
-      renderFarmGrid(ctx, animTimer);
+      if (currentZone === 'zone_village') {
+        renderZoneVillage(ctx, animTimer);
+      } else if (currentZone === 'zone_woods') {
+        renderZoneWoods(ctx, animTimer);
+      } else if (currentZone === 'zone_lab') {
+        renderZoneLab(ctx, animTimer);
+      } else if (currentZone === 'zone_lake') {
+        renderZoneLake(ctx, animTimer);
+      } else if (currentZone === 'zone_mines') {
+        renderZoneMines(ctx, animTimer);
+      } else if (currentZone === 'zone_ruins') {
+        renderZoneRuins(ctx, animTimer);
+      } else if (currentZone === 'zone_summit') {
+        renderZoneSummit(ctx, animTimer);
+      } else {
+        // Default: Aetherwyn Farm
+        renderGround(ctx);
+        renderFarmhouse(ctx);
+        renderShippingBin(ctx);
+        renderWaterPond(ctx, animTimer);
+        renderPastureFence(ctx);
+        renderAnimals(ctx);
+        renderFarmGrid(ctx, animTimer);
+      }
 
-      // Living NPCs with A* Pathfinding
+      // Living NPCs with Unique Sprites & A* Pathfinding
       renderPathfindingNPCs(ctx, animTimer);
 
       // Remote Multiplayer Players
@@ -276,7 +294,7 @@ export default function GameCanvas({
       // Hover Reticle
       renderReticle(ctx, animTimer);
 
-      // Rain / Night / Sunset Lighting
+      // Weather & Lighting Overlay
       if (isRaining) renderRain(ctx);
       renderLighting(ctx);
 
@@ -288,7 +306,7 @@ export default function GameCanvas({
 
     animationFrameId = requestAnimationFrame(gameLoop);
     return () => cancelAnimationFrame(animationFrameId);
-  }, [gameState, hoverTile, localPlayerChatBubble]);
+  }, [gameState, hoverTile, localPlayerChatBubble, currentZone]);
 
   const handleMouseMove = (e) => {
     const canvas = canvasRef.current;
@@ -557,6 +575,7 @@ export default function GameCanvas({
 
   // ==================== RENDERING METHODS ====================
 
+  // 1. AETHERWYN FARM
   const renderGround = (ctx) => {
     ctx.fillStyle = '#2d5a27';
     ctx.fillRect(0, 0, GRID_COLS * TILE_SIZE, GRID_ROWS * TILE_SIZE);
@@ -580,12 +599,10 @@ export default function GameCanvas({
   };
 
   const renderPastureFence = (ctx) => {
-    // Fenced Animal pasture at (1..4, 8..12)
     ctx.strokeStyle = '#92400e';
     ctx.lineWidth = 3;
     ctx.strokeRect(1 * TILE_SIZE, 8.5 * TILE_SIZE, 3.5 * TILE_SIZE, 4.5 * TILE_SIZE);
 
-    // Sign
     ctx.fillStyle = '#fef3c7';
     ctx.font = '9px sans-serif';
     ctx.fillText('🐑 Peternakan', 1.2 * TILE_SIZE, 8.3 * TILE_SIZE);
@@ -789,7 +806,205 @@ export default function GameCanvas({
     }
   };
 
-  // Render Living A* Pathfinding NPCs
+  // 2. GREENVALE VILLAGE SQUARE
+  const renderZoneVillage = (ctx, animTimer) => {
+    // Cobblestone ground
+    ctx.fillStyle = '#475569';
+    ctx.fillRect(0, 0, GRID_COLS * TILE_SIZE, GRID_ROWS * TILE_SIZE);
+    ctx.fillStyle = '#334155';
+    for (let x = 0; x < GRID_COLS; x += 2) {
+      for (let y = 0; y < GRID_ROWS; y += 2) {
+        ctx.strokeRect(x * TILE_SIZE + 2, y * TILE_SIZE + 2, 36, 36);
+      }
+    }
+
+    // Central Stone Fountain
+    const fx = 8 * TILE_SIZE;
+    const fy = 8 * TILE_SIZE;
+    ctx.fillStyle = '#94a3b8';
+    ctx.beginPath();
+    ctx.arc(fx, fy, 45, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#0284c7';
+    ctx.beginPath();
+    ctx.arc(fx, fy, 36, 0, Math.PI * 2);
+    ctx.fill();
+    // Water Jets
+    ctx.fillStyle = '#ffffff';
+    const jetH = 12 + Math.sin(animTimer * 5) * 4;
+    ctx.fillRect(fx - 2, fy - jetH, 4, jetH);
+
+    // Mira's General Store (East)
+    ctx.fillStyle = '#831843';
+    ctx.fillRect(11 * TILE_SIZE, 2 * TILE_SIZE, 140, 80);
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = '10px sans-serif';
+    ctx.fillText('🍎 Toserba Mira', 11 * TILE_SIZE + 25, 2 * TILE_SIZE + 95);
+
+    // Rowan's Blacksmith Forge (West)
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(1 * TILE_SIZE, 2 * TILE_SIZE, 130, 80);
+    ctx.fillStyle = '#f97316'; // Glowing forge hearth
+    ctx.fillRect(1 * TILE_SIZE + 20, 2 * TILE_SIZE + 35, 25, 25);
+    ctx.fillStyle = '#fef08a';
+    ctx.fillText('🔨 Bengkel Tempa Rowan', 1 * TILE_SIZE + 10, 2 * TILE_SIZE + 95);
+  };
+
+  // 3. WHISPERING WOODS
+  const renderZoneWoods = (ctx, animTimer) => {
+    ctx.fillStyle = '#14532d'; // Dark Forest Moss
+    ctx.fillRect(0, 0, GRID_COLS * TILE_SIZE, GRID_ROWS * TILE_SIZE);
+
+    // Giant Ancient Aether Oak in Center
+    ctx.fillStyle = '#451a03';
+    ctx.fillRect(7 * TILE_SIZE, 5 * TILE_SIZE, 80, 100);
+    ctx.fillStyle = 'rgba(168, 85, 247, 0.75)'; // Purple bioluminescent canopy
+    ctx.beginPath();
+    ctx.arc(8 * TILE_SIZE, 4.5 * TILE_SIZE, 75 + Math.sin(animTimer * 2) * 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Elara's Apothecary
+    ctx.fillStyle = '#166534';
+    ctx.fillRect(11 * TILE_SIZE, 8 * TILE_SIZE, 130, 75);
+    ctx.fillStyle = '#86efac';
+    ctx.font = '10px sans-serif';
+    ctx.fillText('🌿 Apotek Tabib Elara', 11 * TILE_SIZE + 15, 8 * TILE_SIZE + 90);
+  };
+
+  // 4. AETHER TECH LAB
+  const renderZoneLab = (ctx, animTimer) => {
+    ctx.fillStyle = '#1e293b'; // Slate metal plates
+    ctx.fillRect(0, 0, GRID_COLS * TILE_SIZE, GRID_ROWS * TILE_SIZE);
+
+    // Glowing Cyan Circuit Lines
+    ctx.strokeStyle = '#06b6d4';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(0, 8 * TILE_SIZE);
+    ctx.lineTo(GRID_COLS * TILE_SIZE, 8 * TILE_SIZE);
+    ctx.moveTo(8 * TILE_SIZE, 0);
+    ctx.lineTo(8 * TILE_SIZE, GRID_ROWS * TILE_SIZE);
+    ctx.stroke();
+
+    // Giant Aether Generator Ring
+    const gx = 8 * TILE_SIZE;
+    const gy = 8 * TILE_SIZE;
+    ctx.fillStyle = '#0891b2';
+    ctx.beginPath();
+    ctx.arc(gx, gy, 50, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#22d3ee';
+    ctx.beginPath();
+    ctx.arc(gx, gy, 32 + Math.sin(animTimer * 6) * 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Nessa's Workshop
+    ctx.fillStyle = '#0e7490';
+    ctx.fillRect(11 * TILE_SIZE, 1 * TILE_SIZE, 140, 80);
+    ctx.fillStyle = '#67e8f9';
+    ctx.font = '10px sans-serif';
+    ctx.fillText('⚡ Lab Riset Nessa', 11 * TILE_SIZE + 25, 1 * TILE_SIZE + 95);
+  };
+
+  // 5. STARFALL LAKE & DOCKS
+  const renderZoneLake = (ctx, animTimer) => {
+    // Water Covering Most Screen
+    ctx.fillStyle = '#0369a1';
+    ctx.fillRect(0, 0, GRID_COLS * TILE_SIZE, GRID_ROWS * TILE_SIZE);
+
+    // Animated Waves
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+    for (let i = 0; i < 8; i++) {
+      const wx = (i * 90 + animTimer * 25) % (GRID_COLS * TILE_SIZE);
+      ctx.fillRect(wx, i * 65 + 30, 45, 3);
+    }
+
+    // Long Wooden Fishing Pier
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(3 * TILE_SIZE, 4 * TILE_SIZE, 380, 60);
+
+    // Moored Boat
+    ctx.fillStyle = '#b45309';
+    ctx.beginPath();
+    ctx.ellipse(13 * TILE_SIZE, 6 * TILE_SIZE, 35, 15, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#fef3c7';
+    ctx.font = '10px sans-serif';
+    ctx.fillText('⛵ Dermaga Danau Bintang (Pancing [F])', 4 * TILE_SIZE, 4 * TILE_SIZE + 35);
+  };
+
+  // 6. FORGOTTEN MINES CAVERN
+  const renderZoneMines = (ctx, animTimer) => {
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(0, 0, GRID_COLS * TILE_SIZE, GRID_ROWS * TILE_SIZE);
+
+    // Glowing Cave Crystals
+    ctx.fillStyle = '#06b6d4';
+    ctx.fillRect(3 * TILE_SIZE, 3 * TILE_SIZE, 14, 20);
+    ctx.fillRect(12 * TILE_SIZE, 10 * TILE_SIZE, 14, 20);
+    ctx.fillStyle = '#fbbf24';
+    ctx.fillRect(11 * TILE_SIZE, 4 * TILE_SIZE, 16, 16);
+
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = '10px sans-serif';
+    ctx.fillText('⛏️ Gua Tambang Terlupakan (Tempur [M])', 5 * TILE_SIZE, 8 * TILE_SIZE);
+  };
+
+  // 7. SUNKEN AETHER RUINS
+  const renderZoneRuins = (ctx, animTimer) => {
+    ctx.fillStyle = '#334155'; // Ancient marble tile
+    ctx.fillRect(0, 0, GRID_COLS * TILE_SIZE, GRID_ROWS * TILE_SIZE);
+
+    // Glowing Pillars
+    const pillars = [[3, 3], [12, 3], [3, 12], [12, 12]];
+    pillars.forEach(([px, py]) => {
+      ctx.fillStyle = '#cbd5e1';
+      ctx.fillRect(px * TILE_SIZE, py * TILE_SIZE, 35, 45);
+      ctx.fillStyle = '#22d3ee';
+      ctx.fillRect(px * TILE_SIZE + 10, py * TILE_SIZE + 10, 15, 25);
+    });
+
+    // Central Relic Pedestal
+    ctx.fillStyle = '#f59e0b';
+    ctx.beginPath();
+    ctx.arc(8 * TILE_SIZE, 8 * TILE_SIZE, 28, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#67e8f9';
+    ctx.font = '10px sans-serif';
+    ctx.fillText('🏛️ Reruntuhan Kuno Aether', 6 * TILE_SIZE, 8 * TILE_SIZE + 45);
+  };
+
+  // 8. HIGHLAND WINDMILL & SUMMIT
+  const renderZoneSummit = (ctx, animTimer) => {
+    ctx.fillStyle = '#78716c'; // Mountain peak rock
+    ctx.fillRect(0, 0, GRID_COLS * TILE_SIZE, GRID_ROWS * TILE_SIZE);
+
+    // Golden Wheat Fields on Ridge
+    ctx.fillStyle = '#eab308';
+    ctx.fillRect(2 * TILE_SIZE, 9 * TILE_SIZE, 240, 120);
+
+    // Giant Wooden Windmill
+    const wx = 11 * TILE_SIZE;
+    const wy = 5 * TILE_SIZE;
+    ctx.fillStyle = '#b45309';
+    ctx.fillRect(wx - 20, wy, 40, 90);
+    // Spinning Blades
+    ctx.save();
+    ctx.translate(wx, wy);
+    ctx.rotate(animTimer * 1.5);
+    ctx.fillStyle = '#fef3c7';
+    ctx.fillRect(-6, -60, 12, 120);
+    ctx.fillRect(-60, -6, 120, 12);
+    ctx.restore();
+
+    ctx.fillStyle = '#fef3c7';
+    ctx.font = '10px sans-serif';
+    ctx.fillText('🌾 Puncak Kincir Angin Gunung', 2 * TILE_SIZE, 3 * TILE_SIZE);
+  };
+
+  // Render Living A* Pathfinding NPCs with Unique Faces, Hats & Shirts
   const renderPathfindingNPCs = (ctx, animTimer) => {
     const px = playerPosRef.current.x;
     const py = playerPosRef.current.y;
@@ -798,19 +1013,89 @@ export default function GameCanvas({
       const nx = npc.x * TILE_SIZE;
       const ny = npc.y * TILE_SIZE;
 
-      // Shadow
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+      // Drop Shadow
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
       ctx.beginPath();
       ctx.ellipse(nx + 20, ny + 35, 11, 5, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // NPC Body
-      ctx.fillStyle = npcId === 'npc_elara' ? '#15803d' : npcId === 'npc_rowan' ? '#78350f' : npcId === 'npc_nessa' ? '#0891b2' : '#c2410c';
-      ctx.fillRect(nx + 13, ny + 17, 14, 15);
-
-      // Face
-      ctx.fillStyle = '#fed7aa';
-      ctx.fillRect(nx + 14, ny + 8, 12, 10);
+      // UNIQUE NPC PIXEL SPRITE DRAWING
+      if (npcId === 'npc_elara') {
+        // Emerald Robe
+        ctx.fillStyle = '#15803d';
+        ctx.fillRect(nx + 13, ny + 18, 14, 14);
+        ctx.fillStyle = '#fef3c7';
+        ctx.fillRect(nx + 17, ny + 17, 6, 3);
+        // Face
+        ctx.fillStyle = '#fed7aa';
+        ctx.fillRect(nx + 14, ny + 8, 12, 10);
+        // Long Braided Chestnut Hair
+        ctx.fillStyle = '#78350f';
+        ctx.fillRect(nx + 12, ny + 7, 3, 16);
+        ctx.fillRect(nx + 25, ny + 7, 3, 16);
+        // Green Floral Crown / Leaf Hat
+        ctx.fillStyle = '#16a34a';
+        ctx.fillRect(nx + 13, ny + 5, 14, 3);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(nx + 19, ny + 4, 3, 3);
+      } else if (npcId === 'npc_rowan') {
+        // Leather Apron with Steel Pauldron
+        ctx.fillStyle = '#78350f';
+        ctx.fillRect(nx + 12, ny + 17, 16, 15);
+        ctx.fillStyle = '#64748b';
+        ctx.fillRect(nx + 10, ny + 17, 4, 6);
+        // Face with stubble
+        ctx.fillStyle = '#d97706';
+        ctx.fillRect(nx + 14, ny + 8, 12, 10);
+        ctx.fillStyle = '#451a03';
+        ctx.fillRect(nx + 15, ny + 14, 10, 4);
+        // Blacksmith Spiked Hair & Welder Headband
+        ctx.fillStyle = '#1c1917';
+        ctx.fillRect(nx + 13, ny + 5, 14, 4);
+        ctx.fillStyle = '#b45309';
+        ctx.fillRect(nx + 13, ny + 8, 14, 2);
+        ctx.fillStyle = '#f59e0b';
+        ctx.fillRect(nx + 16, ny + 7, 3, 3);
+      } else if (npcId === 'npc_nessa') {
+        // Teal Engineer Coat
+        ctx.fillStyle = '#0891b2';
+        ctx.fillRect(nx + 13, ny + 17, 14, 15);
+        ctx.fillStyle = '#22d3ee';
+        ctx.fillRect(nx + 14, ny + 20, 3, 3);
+        // Face
+        ctx.fillStyle = '#fed7aa';
+        ctx.fillRect(nx + 14, ny + 8, 12, 10);
+        // Spiky Golden-Blonde Hair
+        ctx.fillStyle = '#fde047';
+        ctx.fillRect(nx + 12, ny + 5, 16, 4);
+        // Steampunk Brass Goggles with Turquoise Lenses
+        ctx.fillStyle = '#b45309';
+        ctx.fillRect(nx + 13, ny + 4, 14, 3);
+        ctx.fillStyle = '#22d3ee';
+        ctx.fillRect(nx + 15, ny + 3, 4, 4);
+        ctx.fillRect(nx + 21, ny + 3, 4, 4);
+      } else if (npcId === 'npc_mira') {
+        // Burgundy Velvet Merchant Tunic with Gold Filigree
+        ctx.fillStyle = '#831843';
+        ctx.fillRect(nx + 13, ny + 17, 14, 15);
+        ctx.fillStyle = '#fbbf24';
+        ctx.fillRect(nx + 18, ny + 17, 4, 15);
+        // Face
+        ctx.fillStyle = '#fed7aa';
+        ctx.fillRect(nx + 14, ny + 8, 12, 10);
+        // Wavy Auburn Hair
+        ctx.fillStyle = '#92400e';
+        ctx.fillRect(nx + 12, ny + 7, 3, 14);
+        ctx.fillRect(nx + 25, ny + 7, 3, 14);
+        // Feathered Merchant Beret Hat
+        ctx.fillStyle = '#831843';
+        ctx.fillRect(nx + 12, ny + 4, 16, 4);
+        ctx.fillStyle = '#eab308';
+        ctx.fillRect(nx + 24, ny + 1, 4, 5);
+      } else {
+        ctx.fillStyle = '#475569';
+        ctx.fillRect(nx + 13, ny + 17, 14, 15);
+      }
 
       // Name & Title Badge
       ctx.font = 'bold 9px sans-serif';
@@ -832,35 +1117,29 @@ export default function GameCanvas({
   // Render Remote Online Players with linear lerp
   const renderRemotePlayers = (ctx, dt) => {
     for (const [clientId, p] of multiplayer.remotePlayers.entries()) {
-      // Lerp position smoothly
       p.x += (p.targetX - p.x) * Math.min(1.0, dt * 14);
       p.y += (p.targetY - p.y) * Math.min(1.0, dt * 14);
 
       const rx = p.x;
       const ry = p.y;
 
-      // Drop shadow
       ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
       ctx.beginPath();
       ctx.ellipse(rx + 20, ry + 36, 12, 6, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // Tunic
       ctx.fillStyle = p.color || '#3b82f6';
       ctx.fillRect(rx + 12, ry + 16, 16, 14);
 
-      // Head
       ctx.fillStyle = '#fed7aa';
       ctx.fillRect(rx + 13, ry + 6, 14, 11);
 
-      // Nameplate
       ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
       ctx.fillRect(rx + 2, ry - 10, 36, 13);
       ctx.fillStyle = '#38bdf8';
       ctx.font = 'bold 8px sans-serif';
       ctx.fillText(p.name ? p.name.substring(0, 7) : 'Pemain', rx + 4, ry - 1);
 
-      // Speech Bubble
       if (p.chat_message && p.chat_timer > 0) {
         p.chat_timer -= dt;
         renderSpeechBubble(ctx, p.chat_message, rx + 20, ry - 16);
@@ -876,7 +1155,6 @@ export default function GameCanvas({
     const isMoving = isMovingRef.current;
     const step = isMoving ? Math.floor(walkFrameRef.current) % 2 : 0;
 
-    // Drop shadow
     ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
     ctx.beginPath();
     ctx.ellipse(px + 20, py + 36, 12, 6, 0, 0, Math.PI * 2);
@@ -923,7 +1201,6 @@ export default function GameCanvas({
     ctx.font = 'bold 8px sans-serif';
     ctx.fillText('Kamu', px + 10, py - 3);
 
-    // Local Chat Bubble
     if (localPlayerChatBubble) {
       renderSpeechBubble(ctx, localPlayerChatBubble, px + 20, py - 18);
     }
@@ -940,7 +1217,6 @@ export default function GameCanvas({
     ctx.roundRect(cx - boxW / 2, cy - boxH, boxW, boxH, 6);
     ctx.fill();
 
-    // Pointer tail
     ctx.beginPath();
     ctx.moveTo(cx - 4, cy);
     ctx.lineTo(cx, cy + 5);
@@ -1028,8 +1304,17 @@ export default function GameCanvas({
           maxWidth: '100vw'
         }}
       />
-      <div className="absolute top-3 left-4 bg-black/60 backdrop-blur-md px-3 py-1 rounded-lg border border-amber-500/30 text-xs text-amber-200 pointer-events-none">
-        Petak: ({hoverTile.x}, {hoverTile.y}) • [WASD] Gerak • [Spasi/Klik] Aksi • [F] Mancing • [Enter] Chat
+      <div className="absolute top-3 left-4 flex items-center space-x-2 pointer-events-auto">
+        <div className="bg-black/70 backdrop-blur-md px-3 py-1 rounded-lg border border-amber-500/30 text-xs text-amber-200 pointer-events-none">
+          Petak: ({hoverTile.x}, {hoverTile.y}) • [WASD] Gerak • [Spasi/Klik] Aksi
+        </div>
+        <button
+          onClick={() => { sounds.playClick(); onOpenWorldMap(); }}
+          className="bg-amber-800/90 hover:bg-amber-700 text-amber-100 border border-amber-400/60 px-3 py-1 rounded-lg text-xs font-bold shadow-lg transition flex items-center space-x-1"
+        >
+          <span>🗺️</span>
+          <span>Peta Wilayah (8 Map)</span>
+        </button>
       </div>
     </div>
   );

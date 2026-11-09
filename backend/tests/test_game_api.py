@@ -122,3 +122,39 @@ def test_npc_voice_ai_dialogue():
     assert res_rowan.status_code == 200
     assert res_rowan.json()["name"] == "Rowan"
 
+def test_zones_and_travel():
+    res_zones = client.get("/api/v1/game/zones")
+    assert res_zones.status_code == 200
+    zones = res_zones.json()
+    assert len(zones) == 8
+    zone_ids = [z["id"] for z in zones]
+    assert "zone_farm" in zone_ids
+    assert "zone_village" in zone_ids
+    assert "zone_woods" in zone_ids
+    assert "zone_lab" in zone_ids
+    assert "zone_lake" in zone_ids
+    assert "zone_summit" in zone_ids
+
+    # Travel to village
+    res_travel = client.post("/api/v1/game/zones/travel/1", json={"zone_id": "zone_village"})
+    assert res_travel.status_code == 200
+    data = res_travel.json()
+    assert data["success"] is True
+    assert "Greenvale Village" in data["current_location"]
+
+def test_tutorial_progression():
+    res_tut = client.get("/api/v1/game/tutorial/1")
+    assert res_tut.status_code == 200
+    quests = res_tut.json()
+    assert len(quests) == 7
+    assert quests[0]["step"] == 1
+
+    # Claim step 1 reward
+    initial_gold = client.get("/api/v1/game/save/1").json()["player"]["gold"]
+    res_claim = client.post("/api/v1/game/tutorial/claim/1", json={"step": 1})
+    assert res_claim.status_code == 200
+    data = res_claim.json()
+    assert data["gold_earned"] == 60
+    assert data["current_gold"] == initial_gold + 60
+
+

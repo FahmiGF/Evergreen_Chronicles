@@ -10,6 +10,7 @@ export default function HUD({
   onOpenFishing,
   onOpenTechTree,
   onOpenDungeon,
+  onOpenWorldMap,
   onOpenBed,
   onOpenGuide,
   onOpenRoster,
@@ -179,6 +180,15 @@ export default function HUD({
           className="bg-cyan-950/70 hover:bg-cyan-900 text-cyan-200 border border-cyan-600 px-2 py-1 rounded-md text-xs font-semibold transition hidden sm:inline-flex"
         >
           🔬 {t.hud.tech}
+        </button>
+
+        <button
+          onClick={() => { sounds.playClick(); onOpenWorldMap(); }}
+          title="Buka Peta 8 Wilayah [O]"
+          className="bg-amber-900/80 hover:bg-amber-800 text-amber-200 border border-amber-500 px-2 py-1 rounded-md text-xs font-semibold transition flex items-center space-x-1"
+        >
+          <span>🗺️</span>
+          <span>Peta</span>
         </button>
 
         <button

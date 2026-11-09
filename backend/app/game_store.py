@@ -472,4 +472,137 @@ CRAFTING_RECIPES = [
     }
 ]
 
+ZONES_CATALOG = [
+    {
+        "id": "zone_farm",
+        "name": "Aetherwyn Farm",
+        "title_id": "Lahan Pertanian Aetherwyn",
+        "description": "Lahan warisan subur dengan rumah petani, petak bercocok tanam, kolam air, dan kandang ternak.",
+        "icon": "🏡",
+        "features": ["Pondok Petani", "Petak Bercocok Tanam", "Kotak Jual", "Kolam Ikan", "Kandang Domba & Ayam"]
+    },
+    {
+        "id": "zone_village",
+        "name": "Greenvale Village Square",
+        "title_id": "Alun-Alun Desa Greenvale",
+        "description": "Jantung perdagangan desa dengan air mancur marmer, Toserba Mira, bengkel tempa Rowan, dan papan pengumuman.",
+        "icon": "🏘️",
+        "features": ["Air Mancur Desa", "Toserba Mira", "Bengkel Tempa Rowan", "Papan Pengumuman"]
+    },
+    {
+        "id": "zone_woods",
+        "name": "Whispering Woods & Sanctuary",
+        "title_id": "Hutan Berbisik & Suaka Herbal",
+        "description": "Hutan pinus kuno tempat tinggal Tabib Elara, dipenuhi tanaman herba liar, jamur bercahaya, dan pohon purba Aether.",
+        "icon": "🌲",
+        "features": ["Apotek Tabib Elara", "Tanaman Herbal Liar", "Pohon Purba Aether", "Mata Air Suci"]
+    },
+    {
+        "id": "zone_lab",
+        "name": "Aether Tech & Power Station",
+        "title_id": "Laboratorium Riset Aether",
+        "description": "Fasilitas riset modern penemu Nessa dengan generator kristal raksasa, jaringan pipa uap, dan arena automaton.",
+        "icon": "⚡",
+        "features": ["Generator Daya Kristal", "Bengkel Perakitan Automaton", "Stasiun Lori Rel"]
+    },
+    {
+        "id": "zone_mines",
+        "name": "The Forgotten Mines",
+        "title_id": "Gua Tambang Terlupakan",
+        "description": "Gua bawah tanah bertingkat penuh monster slime, kristal kelelawar, serta urat bijih tembaga, besi, dan emas.",
+        "icon": "⛏️",
+        "features": ["Tangga Bawah Tanah", "Urat Bijih Logam", "Monster Slime & Bat", "Peti Harta"]
+    },
+    {
+        "id": "zone_lake",
+        "name": "Starfall Lake & Fishing Docks",
+        "title_id": "Danau Bintang & Dermaga Nelayan",
+        "description": "Danau air tawar nan jernih dengan dermaga kayu panjang, perahu nelayan, dan habitat ikan langka.",
+        "icon": "⛵",
+        "features": ["Dermaga Pancing Air Dalam", "Ikan Langka Forel Rembulan", "Mercusuar Pantai"]
+    },
+    {
+        "id": "zone_ruins",
+        "name": "Sunken Aether Ruins",
+        "title_id": "Reruntuhan Kuno Bawah Tanah",
+        "description": "Sisa reruntuhan peradaban maju sebelum The Great Sundering dengan pilar marmer berukir sirkuit kristal.",
+        "icon": "🏛️",
+        "features": ["Pilar Berukir Glif Kuno", "Teka-teki Resonansi", "Peti Pusaka Kristal"]
+    },
+    {
+        "id": "zone_summit",
+        "name": "Highland Windmill & Summit",
+        "title_id": "Puncak Gunung Kincir Angin",
+        "description": "Dataran tinggi berangin sejuk dengan kincir angin raksasa, ladang gandum emas, dan panorama seluruh kerajaan.",
+        "icon": "🌾",
+        "features": ["Kincir Angin Gandum", "Pemandangan Lembah Aetherwyn", "Sarang Rajawali Langka"]
+    }
+]
+
+TUTORIAL_QUESTS = [
+    {
+        "step": 1,
+        "id": "tut_till",
+        "title": "Cangkul Tanah Ladang",
+        "description": "Gunakan Cangkul Besi Tempa (Slot [1]) lalu klik pada petak rumput di ladang.",
+        "reward_gold": 60,
+        "reward_items": [{"item_id": "seed_parsnip", "count": 5}],
+        "completed": False
+    },
+    {
+        "step": 2,
+        "id": "tut_plant",
+        "title": "Tanam Benih Parsnip",
+        "description": "Pilih Benih Parsnip dan tanam di petak tanah yang telah dicangkul.",
+        "reward_gold": 60,
+        "reward_items": [],
+        "completed": False
+    },
+    {
+        "step": 3,
+        "id": "tut_water",
+        "title": "Siram Tanaman dengan Gembor",
+        "description": "Pilih Gembor Tembaga (Slot [2]) dan siram tanamanmu agar tanah menjadi basah dan subur.",
+        "reward_gold": 60,
+        "reward_items": [],
+        "completed": False
+    },
+    {
+        "step": 4,
+        "id": "tut_talk",
+        "title": "Bicara dengan Tabib Elara",
+        "description": "Dekati Tabib Elara yang sedang berjalan atau klik namanya di panel samping untuk mendengarkan Suara AI-nya.",
+        "reward_gold": 100,
+        "reward_items": [],
+        "completed": False
+    },
+    {
+        "step": 5,
+        "id": "tut_fish",
+        "title": "Memancing di Kolam Air",
+        "description": "Dekati kolam air dan tekan [F] atau klik tombol Pancing untuk menangkap ikan.",
+        "reward_gold": 120,
+        "reward_items": [],
+        "completed": False
+    },
+    {
+        "step": 6,
+        "id": "tut_dungeon",
+        "title": "Jelajah Gua Tambang Terlupakan",
+        "description": "Buka menu Gua [M], kalahkan monster slime dengan pedang, dan kumpulkan bijih logam.",
+        "reward_gold": 150,
+        "reward_items": [{"item_id": "mat_aether_crystal", "count": 2}],
+        "completed": False
+    },
+    {
+        "step": 7,
+        "id": "tut_sleep",
+        "title": "Jual Hasil Bumi & Tidur",
+        "description": "Masukkan barang ke Kotak Pengiriman lalu tidurlah di Kasur Rumah [Z] untuk memulai hari baru.",
+        "reward_gold": 250,
+        "reward_items": [],
+        "completed": False
+    }
+]
+
 game_store = EvergreenGameEngine()

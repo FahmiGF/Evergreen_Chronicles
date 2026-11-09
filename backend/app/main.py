@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
-from app.game_store import game_store, ITEMS_DATABASE, CRAFTING_RECIPES
+from app.game_store import game_store, ITEMS_DATABASE, CRAFTING_RECIPES, ZONES_CATALOG, TUTORIAL_QUESTS
 from app.npc_engine import npc_manager
 from app.websocket_manager import world_hub
 
@@ -221,6 +221,70 @@ def get_cooking_recipes():
 @app.get("/api/v1/game/fish-catalog")
 def get_fish_catalog():
     return FISH_CATALOG
+
+@app.get("/api/v1/game/zones")
+def get_world_zones():
+    """Return all 8 playable world zones and kingdoms in Aetherwyn."""
+    return ZONES_CATALOG
+
+@app.post("/api/v1/game/zones/travel/{slot_id}")
+def travel_to_zone(slot_id: int, zone_id: str = Body(..., embed=True)):
+    """Fast-travel player to a selected world zone."""
+    save = game_store.get_save(slot_id)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    
+    zone = next((z for z in ZONES_CATALOG if z["id"] == zone_id), None)
+    if not zone:
+        raise HTTPException(status_code=404, detail=f"Zone '{zone_id}' not found")
+
+    save.world["current_location"] = zone["name"]
+    return {
+        "success": True,
+        "zone": zone,
+        "current_location": zone["name"]
+    }
+
+@app.get("/api/v1/game/tutorial/{slot_id}")
+def get_tutorial_progress(slot_id: int):
+    """Retrieve newcomer interactive tutorial progression and rewards."""
+    return TUTORIAL_QUESTS
+
+@app.post("/api/v1/game/tutorial/claim/{slot_id}")
+def claim_tutorial_reward(slot_id: int, step: int = Body(..., embed=True)):
+    """Claim reward for a completed tutorial step."""
+    save = game_store.get_save(slot_id)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+
+    target_quest = next((q for q in TUTORIAL_QUESTS if q["step"] == step), None)
+    if not target_quest:
+        raise HTTPException(status_code=404, detail=f"Tutorial step {step} not found")
+
+    player = save.player
+    player["gold"] += target_quest["reward_gold"]
+
+    # Give reward items
+    inventory = player.get("inventory", [])
+    for itm in target_quest.get("reward_items", []):
+        for slot in inventory:
+            if slot and slot.get("item_id") == itm["item_id"]:
+                slot["count"] += itm["count"]
+                break
+        else:
+            for i, slot in enumerate(inventory):
+                if slot is None:
+                    inventory[i] = {"item_id": itm["item_id"], "count": itm["count"]}
+                    break
+
+    target_quest["completed"] = True
+    return {
+        "success": True,
+        "message": f"Hadiah Tutorial Langkah {step} Diklaim! (+{target_quest['reward_gold']} G)",
+        "gold_earned": target_quest["reward_gold"],
+        "current_gold": player["gold"],
+        "next_step": step + 1
+    }
 
 @app.get("/api/v1/game/save/{slot_id}")
 def load_game(slot_id: int):

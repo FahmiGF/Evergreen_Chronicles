@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { sounds } from '../game/SoundFx';
 import { voiceAi } from '../game/VoiceAiEngine';
+import NpcPortrait from '../game/NpcPortraits';
 
 export default function DialogueBox({
   isOpen,
@@ -187,13 +188,9 @@ export default function DialogueBox({
         </button>
 
         {/* LEFT: NPC Profile & Animated Voice Visualizer */}
-        <div className="flex md:flex-col items-center md:justify-center p-4 bg-stone-950/80 border border-stone-800 rounded-xl min-w-[170px] shadow-inner">
+        <div className="flex md:flex-col items-center md:justify-center p-3.5 bg-stone-950/80 border border-stone-800 rounded-xl min-w-[170px] shadow-inner">
           <div className="relative mb-2">
-            <div className={`w-20 h-20 rounded-full bg-amber-950/80 border-2 flex items-center justify-center text-4xl shadow-inner transition-all ${
-              isSpeaking ? 'border-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.8)] scale-105' : 'border-amber-500/60'
-            }`}>
-              {getNpcAvatar(npc.id)}
-            </div>
+            <NpcPortrait npcId={npc.id} isSpeaking={isSpeaking} className="w-28 h-28" />
 
             {/* Speaking Pulse Badge */}
             {isSpeaking && (
