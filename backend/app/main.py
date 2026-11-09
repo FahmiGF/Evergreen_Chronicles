@@ -69,6 +69,80 @@ class CookRecipeRequest(BaseModel):
 class PetAnimalRequest(BaseModel):
     animal_type: str  # "sheep" or "chicken"
 
+class NpcAiDialogueRequest(BaseModel):
+    npc_id: str
+    topic: str  # "greeting", "work", "advice", "aether_lore", "era_opinion"
+
+NPC_VOICE_AI_DATABASE = {
+    "npc_elara": {
+        "name": "Elara",
+        "title": "Tabib Desa & Ahli Herbal",
+        "tone": "Lembut & Menenangkan",
+        "dialogues": {
+            "greeting": "Selamat pagi, sahabatku. Udara segar Aetherwyn hari ini membawa aroma harum kuncup bunga liar. Apakah badanmu terasa bugar?",
+            "work": "Aku sedang meracik salep pemulih dari daun mint dan sari buah liar. Di lembah sebelah timur, pucuk tanaman herbal mulai bersemi kembali.",
+            "advice": "Jika energimu terkuras setelah seharian mencangkul ladang, rebuslah beberapa parsnip di dapur rumahmu. Sup hangat adalah obat terbaik untuk keletihan.",
+            "aether_lore": "Kristal Aether tidak hanya menggerakkan mesin penemu Nessa, kristal itu juga menumbuhkan tanaman ajaib seperti Moonberry yang hanya bersinar di malam hari.",
+            "era_opinion": "Meskipun teknologi desa kita berkembang pesat, kita tidak boleh melupakan keharmonisan dengan tanah subur dan pepohonan hutan leluhur."
+        }
+    },
+    "npc_rowan": {
+        "name": "Rowan",
+        "title": "Pandai Besi Kerajaan",
+        "tone": "Berat, Berwibawa & Kuat",
+        "dialogues": {
+            "greeting": "Hmph. Api tungku tempa sedang berkobar panas. Jangan berdiri terlalu dekat jika kau belum terbiasa dengan percikan bara besi.",
+            "work": "Aku baru saja menempa mata cangkul baja dan bilah pedang ksatria. Ketajaman logam bergantung pada kesabaran palu dan tingginya panas bara.",
+            "advice": "Jika kau turun ke Gua Terlupakan, bawalah beliung yang kokoh. Monster slime di lantai bawah takut pada tebasan pedang berkecepatan tinggi.",
+            "aether_lore": "Kristal Aether memiliki titik lebur yang unik. Jika ditempa bersama bijih besi berkualitas, logam itu tidak akan pernah berkarat seumur hidup.",
+            "era_opinion": "Dulu kita menempa semuanya dengan tangan dan peluh keringat. Kini mesin uap dan lori tambang Nessa mempermudah suplai bijih besi ke bengkelku."
+        }
+    },
+    "npc_nessa": {
+        "name": "Nessa",
+        "title": "Insinyur Mesin & Penemu",
+        "tone": "Cerdas, Bersemangat & Cepat",
+        "dialogues": {
+            "greeting": "Hei! Lihat ini! Getaran frekuensi kristal ini baru saja menyalakan lampu tanpa setetes pun minyak tanah! Bukankah ini penemuan yang luar biasa?!",
+            "work": "Aku sedang menyempurnakan prototipe Smart Sprinkler Mk.II. Dengan sedikit rangkaian tembaga dan kristal Aether, ladangmu bisa tersiram otomatis 8 petak sekeliling!",
+            "advice": "Jangan ragu menginvestasikan koin emasmu pada Pohon Riset Teknologi di bengkel riset. Semakin maju era peradaban kita, semakin banyak otomatisasi yang bisa kau bangun!",
+            "aether_lore": "Sebelum peristiwa The Great Sundering, peradaban kuno Aetherwyn memiliki jaringan transportasi energi kristal tanpa kabel! Kita sedang menghidupkan kembali kejayaan itu.",
+            "era_opinion": "Masa depan peradaban kita sangat cerah! Dengan kemajuan era teknologi ini, sebentar lagi kita bisa merakit Automaton Robot pemanen mandiri!"
+        }
+    },
+    "npc_mira": {
+        "name": "Mira",
+        "title": "Pedagang Umum Pasar",
+        "tone": "Ramah, Hangat & Lihai Berdagang",
+        "dialogues": {
+            "greeting": "Selamat datang di Toserba Greenvale! Senang sekali melihat wajah ramahmu hari ini. Sayuran segar dari ladangmu selalu jadi incaran para warga desa!",
+            "work": "Aku sedang mencatat pembukuan penjualan mingguan dan memeriksa muatan kotak pengiriman desa. Pasar kita sedang sangat ramai pembeli dari luar wilayah!",
+            "advice": "Tanaman bernilai tinggi seperti stroberi ranum dan moonberry kristal menghasilkan keuntungan emas berlipat ganda. Selalu isi kotak pengirimanmu sebelum tidur!",
+            "aether_lore": "Para saudagar dari kerajaan seberang rela menempuh perjalanan ratusan mil demi membeli sebongkah Kristal Aether murni dari desa kita. Lahan ini adalah berkah besar.",
+            "era_opinion": "Perkembangan desa dari pemukiman kayu kecil menjadi pusat perdagangan modern telah melipatgandakan omzet pasar kita berlipat ganda!"
+        }
+    }
+}
+
+@app.post("/api/v1/game/npc-dialogue-ai")
+def get_npc_ai_dialogue(req: NpcAiDialogueRequest):
+    """Retrieve personality-driven voice AI dialogue text tailored to the selected NPC and topic."""
+    npc_data = NPC_VOICE_AI_DATABASE.get(req.npc_id)
+    if not npc_data:
+        raise HTTPException(status_code=404, detail=f"NPC with ID '{req.npc_id}' not found")
+
+    topic_dialogues = npc_data["dialogues"]
+    spoken_text = topic_dialogues.get(req.topic, topic_dialogues.get("greeting"))
+
+    return {
+        "npc_id": req.npc_id,
+        "name": npc_data["name"],
+        "title": npc_data["title"],
+        "tone": npc_data["tone"],
+        "topic": req.topic,
+        "spoken_text": spoken_text
+    }
+
 # ==================== COOKING & FISHING DATA ====================
 COOKING_RECIPES = [
     {

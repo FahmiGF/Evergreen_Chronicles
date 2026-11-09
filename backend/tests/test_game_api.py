@@ -108,3 +108,17 @@ def test_metrics_endpoint():
     data = res.json()
     assert "online_players" in data
     assert "messages_received" in data
+
+def test_npc_voice_ai_dialogue():
+    res = client.post("/api/v1/game/npc-dialogue-ai", json={"npc_id": "npc_elara", "topic": "work"})
+    assert res.status_code == 200
+    data = res.json()
+    assert data["name"] == "Elara"
+    assert "spoken_text" in data
+    assert len(data["spoken_text"]) > 10
+
+    # Rowan deep blacksmith test
+    res_rowan = client.post("/api/v1/game/npc-dialogue-ai", json={"npc_id": "npc_rowan", "topic": "greeting"})
+    assert res_rowan.status_code == 200
+    assert res_rowan.json()["name"] == "Rowan"
+
