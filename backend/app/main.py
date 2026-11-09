@@ -14,6 +14,7 @@ from app.game_store import (
     game_store,
     ITEMS_DATABASE,
     CRAFTING_RECIPES,
+    BLUEPRINT_CATALOG,
     ZONES_CATALOG,
     TUTORIAL_QUESTS,
     NPC_QUESTS_CATALOG,
@@ -235,6 +236,129 @@ def get_fish_catalog():
 def get_world_zones():
     """Return all 8 playable world zones and kingdoms in Aetherwyn."""
     return ZONES_CATALOG
+
+@app.get("/api/v1/game/blueprints")
+def get_blueprint_catalog():
+    """Return all architectural blueprint structures for building and planning."""
+    return BLUEPRINT_CATALOG
+
+@app.post("/api/v1/game/blueprints/build/{slot_id}")
+async def build_blueprint_structure(slot_id: int, payload: Dict[str, Any] = Body(...)):
+    """Construct a blueprint structure on the farm grid."""
+    save = game_store.get_save(slot_id)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    
+    struct_id = payload.get("structure_id")
+    x = int(payload.get("x", 0))
+    y = int(payload.get("y", 0))
+
+    blueprint = next((b for b in BLUEPRINT_CATALOG if b["id"] == struct_id), None)
+    if not blueprint:
+        raise HTTPException(status_code=400, detail="Blueprint tidak ditemukan")
+    
+    player = save.player
+    # Check gold
+    if player["gold"] < blueprint["cost_gold"]:
+        raise HTTPException(status_code=400, detail=f"Emas tidak cukup! Membutuhkan {blueprint['cost_gold']} Gold.")
+    
+    # Check materials
+    inv = player.get("inventory", [])
+    for mat in blueprint.get("materials", []):
+        needed_id = mat["item_id"]
+        needed_cnt = mat["count"]
+        have_cnt = sum(slot["count"] for slot in inv if slot and slot.get("item_id") == needed_id)
+        if have_cnt < needed_cnt:
+            item_name = ITEMS_DATABASE.get(needed_id, None)
+            name_str = item_name.name if item_name else needed_id
+            raise HTTPException(status_code=400, detail=f"Material tidak cukup: butuh {needed_cnt}x {name_str}")
+
+    # Deduct materials
+    for mat in blueprint.get("materials", []):
+        rem = mat["count"]
+        for slot in inv:
+            if slot and slot.get("item_id") == mat["item_id"]:
+                take = min(rem, slot["count"])
+                slot["count"] -= take
+                rem -= take
+                if slot["count"] <= 0:
+                    slot.clear()
+                if rem <= 0:
+                    break
+    
+    # Deduct gold
+    player["gold"] -= blueprint["cost_gold"]
+
+    # Place on grid
+    if 0 <= y < len(save.farm_grid) and 0 <= x < len(save.farm_grid[0]):
+        tile = save.farm_grid[y][x]
+        tile["structure_type"] = struct_id
+        if "sprinkler" in struct_id:
+            tile["tile_type"] = "tilled"
+        elif "pipe" in struct_id:
+            tile["water_piped"] = True
+
+    # Broadcast to multiplayer
+    await world_hub.broadcast_world_action("build_blueprint", x, y, {
+        "structure_id": struct_id,
+        "name": blueprint["name"]
+    })
+
+    return {
+        "success": True,
+        "message": f"Konstruksi {blueprint['name']} selesai! ✨",
+        "save": save.model_dump()
+    }
+
+@app.post("/api/v1/game/tractor/mount/{slot_id}")
+async def toggle_tractor_mount(slot_id: int):
+    """Mount or dismount the farm tractor."""
+    save = game_store.get_save(slot_id)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    
+    tractor = save.player.setdefault("tractor", {
+        "owned": True,
+        "mounted": False,
+        "x": 6 * 40,
+        "y": 5 * 40,
+        "dir": "down",
+        "attachment": "tiller",
+        "fuel": 100,
+        "max_fuel": 100,
+        "speed_boost": 1.75
+    })
+    tractor["mounted"] = not tractor.get("mounted", False)
+    status_str = "menaiki" if tractor["mounted"] else "turun dari"
+    return {
+        "success": True,
+        "mounted": tractor["mounted"],
+        "message": f"Anda {status_str} Traktor Uap Aetherwyn 🚜",
+        "tractor": tractor
+    }
+
+@app.post("/api/v1/game/tractor/attachment/{slot_id}")
+def set_tractor_attachment(slot_id: int, payload: Dict[str, Any] = Body(...)):
+    """Switch active tractor attachment (tiller, sprayer, mower)."""
+    save = game_store.get_save(slot_id)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    
+    attachment = payload.get("attachment", "tiller")
+    tractor = save.player.setdefault("tractor", {
+        "owned": True,
+        "mounted": False,
+        "attachment": "tiller",
+        "fuel": 100
+    })
+    tractor["attachment"] = attachment
+    names = {"tiller": "Mata Bajak Tiller (3x1)", "sprayer": "Tangki Semprot Air (3x1)", "mower": "Pisau Panen Otomatis (3x1)"}
+    return {
+        "success": True,
+        "attachment": attachment,
+        "message": f"Mode traktor diubah ke: {names.get(attachment, attachment)}",
+        "tractor": tractor
+    }
 
 @app.post("/api/v1/game/zones/travel/{slot_id}")
 def travel_to_zone(slot_id: int, zone_id: str = Body(..., embed=True)):

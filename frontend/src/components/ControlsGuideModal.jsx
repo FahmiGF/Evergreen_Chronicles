@@ -28,10 +28,13 @@ export default function ControlsGuideModal({ isOpen, onClose }) {
             <div className="grid grid-cols-2 gap-2 text-[11px]">
               <div><kbd className="bg-stone-800 px-1.5 py-0.5 rounded border border-stone-600 font-mono text-amber-200">W A S D</kbd> / Panah: Gerak Karakter</div>
               <div><kbd className="bg-stone-800 px-1.5 py-0.5 rounded border border-stone-600 font-mono text-amber-200">Spasi / Klik</kbd>: Pakai Alat / Panen / Tanam</div>
-              <div><kbd className="bg-stone-800 px-1.5 py-0.5 rounded border border-stone-600 font-mono text-amber-200">1 — 9, 0</kbd>: Pilih Slot Bar Cepat</div>
+              <div><kbd className="bg-stone-800 px-1.5 py-0.5 rounded border border-stone-600 font-mono text-amber-200">V</kbd>: Ganti Tampilan 2D / 3D Isometrik</div>
+              <div><kbd className="bg-stone-800 px-1.5 py-0.5 rounded border border-stone-600 font-mono text-amber-200">B</kbd>: Buka / Tutup Mode Blueprint CAD</div>
+              <div><kbd className="bg-stone-800 px-1.5 py-0.5 rounded border border-stone-600 font-mono text-amber-200">T</kbd>: Naik / Turun Traktor Pertanian</div>
+              <div><kbd className="bg-stone-800 px-1.5 py-0.5 rounded border border-stone-600 font-mono text-amber-200">H</kbd>: Klakson Traktor (Saat Berkendara)</div>
+              <div><kbd className="bg-stone-800 px-1.5 py-0.5 rounded border border-stone-600 font-mono text-amber-200">1 — 9, 0</kbd>: Bar Cepat / Alat Traktor</div>
               <div><kbd className="bg-stone-800 px-1.5 py-0.5 rounded border border-stone-600 font-mono text-amber-200">E</kbd>: Buka Tas Ransel</div>
               <div><kbd className="bg-stone-800 px-1.5 py-0.5 rounded border border-stone-600 font-mono text-amber-200">C</kbd>: Buka Meja Kerajinan (Crafting)</div>
-              <div><kbd className="bg-stone-800 px-1.5 py-0.5 rounded border border-stone-600 font-mono text-amber-200">T</kbd>: Buka Riset Teknologi & Era</div>
               <div><kbd className="bg-stone-800 px-1.5 py-0.5 rounded border border-stone-600 font-mono text-amber-200">M</kbd>: Jelajah Gua Tambang & Monster</div>
               <div><kbd className="bg-stone-800 px-1.5 py-0.5 rounded border border-stone-600 font-mono text-amber-200">Z</kbd>: Tidur di Kasur & Mulai Hari Baru</div>
             </div>

@@ -19,6 +19,7 @@ import TutorialGuide from './components/TutorialGuide';
 import QuestLogModal from './components/QuestLogModal';
 import AffectionModal from './components/AffectionModal';
 import StorylineModal from './components/StorylineModal';
+import BlueprintDock from './components/BlueprintDock';
 import { sounds } from './game/SoundFx';
 import { multiplayer } from './game/MultiplayerManager';
 
@@ -31,6 +32,12 @@ export default function App() {
   const [craftingRecipes, setCraftingRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
+
+  // View Modes & Mechanized Farming State
+  const [viewMode, setViewMode] = useState('topdown'); // 'topdown' | '3d' | 'blueprint'
+  const [activeBlueprint, setActiveBlueprint] = useState(null);
+  const [isTractorMounted, setIsTractorMounted] = useState(false);
+  const [tractorAttachment, setTractorAttachment] = useState('tiller'); // 'tiller' | 'sprayer' | 'mower'
 
   // Multiplayer stats
   const [onlineCount, setOnlineCount] = useState(1);
@@ -171,6 +178,14 @@ export default function App() {
       } else if (e.code === 'KeyZ') {
         e.preventDefault();
         setBedOpen((prev) => !prev);
+      } else if (e.code === 'KeyV') {
+        e.preventDefault();
+        setViewMode((prev) => (prev === 'topdown' ? '3d' : 'topdown'));
+        sounds.playClick();
+      } else if (e.code === 'KeyB') {
+        e.preventDefault();
+        setViewMode((prev) => (prev === 'blueprint' ? 'topdown' : 'blueprint'));
+        sounds.playClick();
       } else if (e.code === 'KeyH' || e.key === '?') {
         e.preventDefault();
         setGuideOpen((prev) => !prev);
@@ -254,6 +269,16 @@ export default function App() {
       {/* 1. TOP HUD */}
       <HUD
         gameState={gameState}
+        viewMode={viewMode}
+        onChangeViewMode={setViewMode}
+        isTractorMounted={isTractorMounted}
+        tractorAttachment={tractorAttachment}
+        onChangeAttachment={setTractorAttachment}
+        onToggleTractorMount={() => setIsTractorMounted((prev) => !prev)}
+        onHonkTractor={() => {
+          sounds.playTractorHorn();
+          showNotification('🎺 HONK HONK!', 'info');
+        }}
         onOpenInventory={() => setInventoryOpen(true)}
         onOpenCrafting={() => setCraftingOpen(true)}
         onOpenCooking={() => setCookingOpen(true)}
@@ -283,6 +308,13 @@ export default function App() {
           setGameState={setGameState}
           equippedItem={equippedItemMeta}
           currentZone={currentZoneId}
+          viewMode={viewMode}
+          activeBlueprint={activeBlueprint}
+          onClearActiveBlueprint={() => setActiveBlueprint(null)}
+          isTractorMounted={isTractorMounted}
+          setIsTractorMounted={setIsTractorMounted}
+          tractorAttachment={tractorAttachment}
+          setTractorAttachment={setTractorAttachment}
           onOpenShipping={() => setInventoryOpen(true)}
           onOpenBed={() => setBedOpen(true)}
           onOpenFishing={() => setFishingOpen(true)}
@@ -290,6 +322,16 @@ export default function App() {
           onOpenWorldMap={() => setWorldMapOpen(true)}
           showNotification={showNotification}
           localPlayerChatBubble={localChatBubble}
+        />
+
+        {/* BLUEPRINT CAD ARCHITECTURAL DOCK */}
+        <BlueprintDock
+          isOpen={viewMode === 'blueprint'}
+          onClose={() => setViewMode('topdown')}
+          activeBlueprint={activeBlueprint}
+          onSelectBlueprint={setActiveBlueprint}
+          playerInventory={gameState?.player?.inventory || []}
+          playerGold={gameState?.player?.gold || 0}
         />
 
         {/* TOP-RIGHT: NEWCOMER TUTORIAL GUIDE */}

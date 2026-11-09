@@ -4,6 +4,13 @@ import { translations } from '../i18n/translations';
 
 export default function HUD({
   gameState,
+  viewMode = 'topdown',
+  onChangeViewMode,
+  isTractorMounted = false,
+  tractorAttachment = 'tiller',
+  onChangeAttachment,
+  onToggleTractorMount,
+  onHonkTractor,
   onOpenInventory,
   onOpenCrafting,
   onOpenCooking,
@@ -31,6 +38,8 @@ export default function HUD({
   const { player, world } = gameState;
   const hpPct = Math.round((player.hp / player.max_hp) * 100);
   const staminaPct = Math.round((player.stamina / player.max_stamina) * 100);
+  const tractor = player.tractor || {};
+  const isMounted = isTractorMounted || tractor.mounted;
 
   const formatTime = (h, m) => {
     const period = h >= 12 ? 'PM' : 'AM';
@@ -97,6 +106,46 @@ export default function HUD({
             className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${lang === 'ja' ? 'bg-amber-600 text-white' : 'text-stone-400'}`}
           >
             JA
+          </button>
+        </div>
+
+        {/* VIEW MODE SWITCHER PILL (2D TOP-DOWN, 3D ISOMETRIC, BLUEPRINT CAD) */}
+        <div className="flex items-center space-x-0.5 bg-stone-950/90 p-0.5 rounded-lg border border-cyan-700/50 shadow-inner">
+          <button
+            onClick={() => { sounds.playClick(); onChangeViewMode && onChangeViewMode('topdown'); }}
+            title="Tampilan 2D Top-Down Klasik [V]"
+            className={`px-2 py-1 rounded text-xs font-bold transition flex items-center space-x-1 ${
+              viewMode === 'topdown'
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'text-stone-300 hover:text-white hover:bg-stone-800'
+            }`}
+          >
+            <span>🌿</span>
+            <span className="hidden sm:inline">2D</span>
+          </button>
+          <button
+            onClick={() => { sounds.playClick(); onChangeViewMode && onChangeViewMode('3d'); }}
+            title="Tampilan 3D Isometrik Proyeksi Berkedalaman [V]"
+            className={`px-2 py-1 rounded text-xs font-bold transition flex items-center space-x-1 ${
+              viewMode === '3d'
+                ? 'bg-indigo-600 text-white shadow-sm ring-1 ring-indigo-400'
+                : 'text-stone-300 hover:text-white hover:bg-stone-800'
+            }`}
+          >
+            <span>🌐</span>
+            <span className="hidden sm:inline">3D</span>
+          </button>
+          <button
+            onClick={() => { sounds.playClick(); onChangeViewMode && onChangeViewMode(viewMode === 'blueprint' ? 'topdown' : 'blueprint'); }}
+            title="Mode Arsitektur Cetak Biru CAD [B]"
+            className={`px-2 py-1 rounded text-xs font-bold transition flex items-center space-x-1 ${
+              viewMode === 'blueprint'
+                ? 'bg-cyan-500 text-slate-950 font-black shadow-[0_0_10px_rgba(6,182,212,0.8)]'
+                : 'text-cyan-300 hover:text-cyan-100 hover:bg-cyan-950/70 border border-cyan-800/40'
+            }`}
+          >
+            <span>📐</span>
+            <span className="hidden sm:inline">CAD [B]</span>
           </button>
         </div>
       </div>
@@ -261,6 +310,72 @@ export default function HUD({
           🏠 Menu
         </button>
       </div>
+
+      {/* TRACTOR ACTIVE CONTROLS BAR (IF MOUNTED) */}
+      {isMounted && (
+        <div className="w-full mt-1.5 py-1 px-3 bg-gradient-to-r from-emerald-950/90 via-stone-900/90 to-emerald-950/90 border-t border-b border-emerald-500/50 flex flex-wrap items-center justify-between text-xs select-none shadow-md">
+          <div className="flex items-center space-x-2">
+            <span className="text-base animate-bounce">🚜</span>
+            <span className="font-bold text-emerald-300 font-mono">
+              TRAKTOR MEKANIK AKTIF (+75% Kec.)
+            </span>
+            <span className="text-[11px] text-stone-300 bg-stone-800 px-1.5 py-0.5 rounded border border-stone-600 font-mono">
+              ⛽ {tractor.fuel ?? 100}% Bio-Aether
+            </span>
+          </div>
+
+          <div className="flex items-center space-x-1">
+            <span className="text-[11px] text-stone-400 mr-1 hidden sm:inline">Alat Terpasang:</span>
+            <button
+              onClick={() => { sounds.playClick(); onChangeAttachment && onChangeAttachment('tiller'); }}
+              className={`px-2 py-0.5 rounded text-xs font-bold transition ${
+                tractorAttachment === 'tiller'
+                  ? 'bg-amber-600 text-white shadow ring-1 ring-amber-300'
+                  : 'bg-stone-800 text-stone-300 hover:bg-stone-700'
+              }`}
+              title="Mata Bajak Tanah 3-Ubin [1]"
+            >
+              [1] ⚙️ Bajak
+            </button>
+            <button
+              onClick={() => { sounds.playClick(); onChangeAttachment && onChangeAttachment('sprayer'); }}
+              className={`px-2 py-0.5 rounded text-xs font-bold transition ${
+                tractorAttachment === 'sprayer'
+                  ? 'bg-cyan-600 text-white shadow ring-1 ring-cyan-300'
+                  : 'bg-stone-800 text-stone-300 hover:bg-stone-700'
+              }`}
+              title="Penyemprot Air 3-Ubin [2]"
+            >
+              [2] 💧 Siram
+            </button>
+            <button
+              onClick={() => { sounds.playClick(); onChangeAttachment && onChangeAttachment('mower'); }}
+              className={`px-2 py-0.5 rounded text-xs font-bold transition ${
+                tractorAttachment === 'mower'
+                  ? 'bg-emerald-600 text-white shadow ring-1 ring-emerald-300'
+                  : 'bg-stone-800 text-stone-300 hover:bg-stone-700'
+              }`}
+              title="Pemanen & Babat Gulma 3-Ubin [3]"
+            >
+              [3] 🌾 Panen
+            </button>
+            <button
+              onClick={() => { onHonkTractor && onHonkTractor(); }}
+              className="px-2 py-0.5 rounded bg-stone-800 hover:bg-stone-700 text-amber-200 border border-amber-600/60 font-bold transition"
+              title="Bunyikan Klakson Traktor [H]"
+            >
+              🎺 [H]
+            </button>
+            <button
+              onClick={() => { onToggleTractorMount && onToggleTractorMount(); }}
+              className="px-2 py-0.5 rounded bg-rose-900/80 hover:bg-rose-800 text-rose-200 border border-rose-500 font-bold transition"
+              title="Turun dari Traktor [T]"
+            >
+              🚪 Turun [T]
+            </button>
+          </div>
+        </div>
+      )}
     </header>
   );
 }

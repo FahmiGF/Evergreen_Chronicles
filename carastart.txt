@@ -1,0 +1,23 @@
+================================================================================
+               CARA MENJALANKAN: EVERGREEN CHRONICLES
+================================================================================
+
+Game Web RPG Fantasy Abad Pertengahan berbasis FastAPI dan React/Vite.
+
+Persyaratan:
+- Python 3.10+
+- Browser modern
+
+CARA 1 (Paling Cepat - 1-Click Launcher):
+1. Klik dua kali file:
+   Buka_EvergreenChronicles.bat
+2. Browser akan terbuka otomatis di http://127.0.0.1:8082
+
+CARA 2 (Manual via Terminal):
+1. Buka Terminal di folder backend:
+   cd "C:\Kuliah Sisfor\Github Project\evergreen-chronicles\backend"
+2. Jalankan backend launcher:
+   python run.py
+3. Buka browser di http://127.0.0.1:8082
+
+Untuk menghentikan: Tekan Ctrl + C di jendela terminal.

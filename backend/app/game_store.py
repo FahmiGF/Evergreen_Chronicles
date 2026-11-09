@@ -29,7 +29,12 @@ class FarmTile(BaseModel):
     y: int
     tile_type: str  # grass, tilled, watered, obstacle_rock, obstacle_wood, obstacle_weed, structure
     crop: Optional[CropState] = None
-    structure_type: Optional[str] = None  # e.g. sprinkler, chest, lamp
+    structure_type: Optional[str] = None  # e.g. sprinkler, chest, lamp, pipe, hydroponic
+    tree_type: Optional[str] = None  # oak, pine, birch, willow, lumina, cherry, ironbark, golden_apple
+    tree_stage: Optional[int] = 0  # 0: sapling, 1: young, 2: mature
+    tree_hp: Optional[int] = 3
+    fertilizer_type: Optional[str] = None  # organic, speed
+    water_piped: Optional[bool] = False
 
 class NPCProfile(BaseModel):
     id: str
@@ -88,6 +93,21 @@ ITEMS_DATABASE: Dict[str, Item] = {
     "seed_corn": Item(id="seed_corn", name="Benih Jagung Emas", category="seed", description="Tumbuh di musim panas dan gugur dalam 6 hari.", buy_price=45, sell_price=20, stackable=True, icon_type="seed_bag", crop_growth_days=6, harvest_item_id="crop_corn"),
     "seed_tomato": Item(id="seed_tomato", name="Benih Tomat Segar", category="seed", description="Tumbuh dalam 5 hari dan berbuah cepat.", buy_price=30, sell_price=15, stackable=True, icon_type="seed_bag", crop_growth_days=5, harvest_item_id="crop_tomato"),
     "seed_moonberry": Item(id="seed_moonberry", name="Benih Moonberry Ajaib", category="seed", description="Tanaman langka yang bersinar di malam hari.", buy_price=150, sell_price=75, stackable=True, icon_type="seed_magical", crop_growth_days=7, harvest_item_id="crop_moonberry"),
+    "seed_wheat": Item(id="seed_wheat", name="Benih Gandum Emas", category="seed", description="Tumbuh subur dalam 4 hari. Gandum utama untuk roti hangat dan pakan ternak.", buy_price=25, sell_price=12, stackable=True, icon_type="seed_bag", crop_growth_days=4, harvest_item_id="crop_wheat"),
+    "seed_golden_pumpkin": Item(id="seed_golden_pumpkin", name="Benih Labu Emas", category="seed", description="Benih labu raksasa berkilau emas. Tumbuh dalam 6 hari dengan nilai jual fantastis.", buy_price=180, sell_price=90, stackable=True, icon_type="seed_magical", crop_growth_days=6, harvest_item_id="crop_golden_pumpkin"),
+    "seed_frostberry": Item(id="seed_frostberry", name="Benih Frostberry Salju", category="seed", description="Tanaman beri tahan beku dari Frostpeak. Tumbuh dalam 5 hari menghasilkan buah es segar.", buy_price=90, sell_price=45, stackable=True, icon_type="seed_magical", crop_growth_days=5, harvest_item_id="crop_frostberry"),
+    "seed_sunburst_corn": Item(id="seed_sunburst_corn", name="Benih Jagung Surya", category="seed", description="Varietas jagung modern tahan kekeringan. Tumbuh dalam 5 hari dan panen berulang tiap 2 hari.", buy_price=110, sell_price=55, stackable=True, icon_type="seed_bag", crop_growth_days=5, harvest_item_id="crop_sunburst_corn"),
+    "seed_steam_spud": Item(id="seed_steam_spud", name="Umbi Kentang Uap", category="seed", description="Hasil rekayasa teknologi pertanian Ironhaven. Menghasilkan energi uap alami saat direbus.", buy_price=75, sell_price=35, stackable=True, icon_type="seed_bag", crop_growth_days=4, harvest_item_id="crop_steam_spud"),
+
+    # Tree Saplings (8 Unique Tree Varieties)
+    "sapling_oak": Item(id="sapling_oak", name="Sapling Pohon Ek Rimba", category="seed", description="Tumbuh menjadi Pohon Ek yang rindang dan menghasilkan Kayu Ek padat serta Acorn.", buy_price=80, sell_price=40, stackable=True, icon_type="sapling_oak"),
+    "sapling_pine": Item(id="sapling_pine", name="Sapling Pohon Pinus Salju", category="seed", description="Pohon jarum wangi khas pegunungan. Menghasilkan Kayu Pinus dan Getah Damar berharga.", buy_price=90, sell_price=45, stackable=True, icon_type="sapling_pine"),
+    "sapling_birch": Item(id="sapling_birch", name="Sapling Pohon Birch Perak", category="seed", description="Pohon dengan kulit putih keperakan. Menghasilkan Kayu Birch halus bermutu tinggi.", buy_price=85, sell_price=40, stackable=True, icon_type="sapling_birch"),
+    "sapling_willow": Item(id="sapling_willow", name="Sapling Pohon Gandaria Rawa", category="seed", description="Pohon willow dengan sulur menjuntai artistik. Tahan air dan menghasilkan kayu keras.", buy_price=120, sell_price=60, stackable=True, icon_type="sapling_willow"),
+    "sapling_lumina": Item(id="sapling_lumina", name="Sapling Pohon Lumina Roh", category="seed", description="Pohon magis bercahaya ungu kebiruan dari Moonveil. Menghasilkan Kayu Lumina dan Getah Roh.", buy_price=260, sell_price=130, stackable=True, icon_type="sapling_lumina"),
+    "sapling_cherry": Item(id="sapling_cherry", name="Sapling Pohon Sakura Harum", category="seed", description="Pohon bunga sakura mekar merah muda yang menyejukkan hati. Menghasilkan Nektar Sakura.", buy_price=150, sell_price=75, stackable=True, icon_type="sapling_cherry"),
+    "sapling_ironbark": Item(id="sapling_ironbark", name="Sapling Pohon Besi Purba", category="seed", description="Pohon purba berkulit sekeras lempeng baja. Menghasilkan Kayu Besi untuk industri berat.", buy_price=220, sell_price=110, stackable=True, icon_type="sapling_ironbark"),
+    "sapling_golden_apple": Item(id="sapling_golden_apple", name="Sapling Pohon Apel Emas", category="seed", description="Pohon buah legendaris istana Crownspire. Berbuah Apel Emas yang memulihkan stamina penuh.", buy_price=400, sell_price=200, stackable=True, icon_type="sapling_golden_apple"),
 
     # Crops Harvested
     "crop_parsnip": Item(id="crop_parsnip", name="Parsnip Segar", category="crop", description="Akar umbi manis musim semi.", buy_price=60, sell_price=45, stackable=True, icon_type="parsnip", energy_restore=25),
@@ -97,20 +117,56 @@ ITEMS_DATABASE: Dict[str, Item] = {
     "crop_corn": Item(id="crop_corn", name="Jagung Emas", category="crop", description="Tongkol jagung kuning manis kaya karbohidrat.", buy_price=120, sell_price=90, stackable=True, icon_type="corn", energy_restore=40),
     "crop_tomato": Item(id="crop_tomato", name="Tomat Merah Segar", category="crop", description="Bahan dasar masakan sup dan saus hangat.", buy_price=80, sell_price=60, stackable=True, icon_type="tomato", energy_restore=30),
     "crop_moonberry": Item(id="crop_moonberry", name="Moonberry Kristal", category="crop", description="Buah magis bercahaya ungu yang berharga tinggi.", buy_price=400, sell_price=320, stackable=True, icon_type="moonberry", energy_restore=80),
+    "crop_wheat": Item(id="crop_wheat", name="Gandum Emas Aetherwyn", category="crop", description="Gandum matang kaya bulir emas, bahan tepung roti dan pakan ternak istimewa.", buy_price=75, sell_price=55, stackable=True, icon_type="wheat", energy_restore=30),
+    "crop_golden_pumpkin": Item(id="crop_golden_pumpkin", name="Labu Emas Kerajaan", category="crop", description="Labu raksasa kuning keemasan yang memancarkan aroma manis karamel.", buy_price=500, sell_price=380, stackable=True, icon_type="golden_pumpkin", energy_restore=90),
+    "crop_frostberry": Item(id="crop_frostberry", name="Frostberry Dingin", category="crop", description="Buah beri sejuk yang memberikan kesegaran instan di tengah keletihan kerja.", buy_price=220, sell_price=160, stackable=True, icon_type="frostberry", energy_restore=60),
+    "crop_sunburst_corn": Item(id="crop_sunburst_corn", name="Jagung Surya Unggul", category="crop", description="Jagung manis dengan biji berkilau seperti sinar fajar musim panas.", buy_price=240, sell_price=175, stackable=True, icon_type="sunburst_corn", energy_restore=65),
+    "crop_steam_spud": Item(id="crop_steam_spud", name="Kentang Uap Mekanikal", category="crop", description="Kentang kaya pati padat bertenaga yang disukai para insinyur perbengkelan.", buy_price=170, sell_price=130, stackable=True, icon_type="steam_spud", energy_restore=50),
+    "crop_golden_apple": Item(id="crop_golden_apple", name="Apel Emas Mistis", category="crop", description="Buah legenda Aetherwyn. Menyembuhkan 80 HP dan memulihkan 100 Stamina seketika!", buy_price=600, sell_price=450, stackable=True, icon_type="golden_apple", energy_restore=100),
+    "crop_cherry_nectar": Item(id="crop_cherry_nectar", name="Nektar Bunga Sakura", category="crop", description="Ekstrak madu bunga sakura musim semi yang manis dan menenangkan.", buy_price=190, sell_price=140, stackable=True, icon_type="cherry_nectar", energy_restore=50),
 
-    # Minerals & Materials
+    # Minerals & Materials (Wood Types & Tree Drops)
     "mat_wood": Item(id="mat_wood", name="Kayu Gelondongan", category="material", description="Material dasar bangunan dan pagar.", buy_price=20, sell_price=5, stackable=True, icon_type="wood"),
+    "mat_oak_wood": Item(id="mat_oak_wood", name="Balok Kayu Ek", category="material", description="Kayu ek kuat dan padat untuk struktur perumahan dan perabot.", buy_price=30, sell_price=10, stackable=True, icon_type="wood_oak"),
+    "mat_pine_wood": Item(id="mat_pine_wood", name="Kayu Pinus Wangi", category="material", description="Kayu pinus resin ringan untuk peti dan lantai kapal.", buy_price=35, sell_price=12, stackable=True, icon_type="wood_pine"),
+    "mat_birch_wood": Item(id="mat_birch_wood", name="Kayu Birch Perak", category="material", description="Kayu berwarna terang elegan untuk perabot mewah dan kertas gambar cetak biru.", buy_price=35, sell_price=12, stackable=True, icon_type="wood_birch"),
+    "mat_willow_hardwood": Item(id="mat_willow_hardwood", name="Kayu Gandaria Rawa", category="material", description="Kayu elastis tahan air untuk kincir air dan pipa irigasi.", buy_price=45, sell_price=18, stackable=True, icon_type="wood_willow"),
+    "mat_lumina_wood": Item(id="mat_lumina_wood", name="Kayu Lumina Berpendar", category="material", description="Kayu magis yang memancarkan pendaran ungu di malam hari. Bahan konduktor daya aether.", buy_price=90, sell_price=45, stackable=True, icon_type="wood_lumina"),
+    "mat_cherry_wood": Item(id="mat_cherry_wood", name="Kayu Sakura Merah Muda", category="material", description="Kayu dekoratif bernilai artistik tinggi dengan serat merah muda halus.", buy_price=65, sell_price=28, stackable=True, icon_type="wood_cherry"),
+    "mat_ironbark_timber": Item(id="mat_ironbark_timber", name="Balok Kayu Besi Purba", category="material", description="Kayu sekeras baja dari pohon purba. Tahan api dan peluru, bahan mesin industri berat.", buy_price=120, sell_price=60, stackable=True, icon_type="wood_ironbark"),
+    "mat_tree_sap": Item(id="mat_tree_sap", name="Getah Pohon Alami", category="material", description="Getah perekat alami untuk membuat pupuk dan obor.", buy_price=25, sell_price=8, stackable=True, icon_type="sap"),
+    "mat_resin": Item(id="mat_resin", name="Damar Pinus Gunung", category="material", description="Damar amber berkilau untuk vernis kapal dan campuran bahan bakar uap traktor.", buy_price=40, sell_price=16, stackable=True, icon_type="resin"),
+    "mat_mystic_sap": Item(id="mat_mystic_sap", name="Getah Roh Lumina", category="material", description="Cairan getah mistis bercahaya untuk mengaktifkan medan daya pylon dan traktor aether.", buy_price=110, sell_price=55, stackable=True, icon_type="mystic_sap"),
     "mat_stone": Item(id="mat_stone", name="Batu Kali", category="material", description="Bahan pondasi jalan dan tungku peleburan.", buy_price=20, sell_price=4, stackable=True, icon_type="stone"),
     "mat_copper_ore": Item(id="mat_copper_ore", name="Bijih Tembaga", category="mineral", description="Mineral logam kemerahan dari gua tambang.", buy_price=50, sell_price=25, stackable=True, icon_type="ore_copper"),
     "mat_iron_ore": Item(id="mat_iron_ore", name="Bijih Besi", category="mineral", description="Bahan utama penempaan mesin dan perkakas kokoh.", buy_price=90, sell_price=45, stackable=True, icon_type="ore_iron"),
     "mat_gold_ore": Item(id="mat_gold_ore", name="Bijih Emas Murni", category="mineral", description="Logam mulia berkilau untuk sirkuit dan mahkota.", buy_price=200, sell_price=100, stackable=True, icon_type="ore_gold"),
     "mat_aether_crystal": Item(id="mat_aether_crystal", name="Kristal Aether Murni", category="mineral", description="Sumber energi peradaban modern Aetherwyn.", buy_price=350, sell_price=180, stackable=True, icon_type="aether_crystal"),
 
-    # Modern & Magical Tech
+    # Fertilizers & Soil Enhancers
+    "item_fertilizer_organic": Item(id="item_fertilizer_organic", name="Pupuk Kompos Bio-Organik", category="fertilizer", description="Taburkan pada tanah bercocok tanam. Meningkatkan kualitas hasil panen (+30% nilai jual).", buy_price=40, sell_price=15, stackable=True, icon_type="fertilizer_green"),
+    "item_fertilizer_speed": Item(id="item_fertilizer_speed", name="Eliksir Percepat Tumbuh Aether", category="fertilizer", description="Menutrisi bibit dengan cairan aether aktif, mempercepat masa panen hingga 2 kali lipat!", buy_price=90, sell_price=40, stackable=True, icon_type="fertilizer_blue"),
+
+    # Vehicle (Tractor) & Heavy Farming Accessories
+    "vehicle_tractor": Item(id="vehicle_tractor", name="Traktor Uap Aetherwyn Mk.I", category="vehicle", description="Kendaraan traktor roda besar serbaguna. Naiki (Tekan T) untuk membajak, menyiram, dan panen kilat!", buy_price=2500, sell_price=1200, stackable=False, icon_type="tractor"),
+    "tech_tractor_tiller": Item(id="tech_tractor_tiller", name="Mata Bajak Tiller Traktor", category="technology", description="Attachment depan traktor untuk membajak 3 petak tanah sekaligus saat dikendarai.", buy_price=600, sell_price=250, stackable=False, icon_type="tiller"),
+    "tech_tractor_sprayer": Item(id="tech_tractor_sprayer", name="Tangki Semprot Air Traktor", category="technology", description="Attachment tangki semprot air untuk menyiram 3 petak tanah sekaligus sambil melaju.", buy_price=750, sell_price=300, stackable=False, icon_type="sprayer"),
+    "tech_tractor_mower": Item(id="tech_tractor_mower", name="Pisau Pemanen Otomatis Traktor", category="technology", description="Attachment pemotong panen yang langsung memindahkan hasil panen matang ke bagasi.", buy_price=950, sell_price=400, stackable=False, icon_type="mower"),
+    "fuel_bio_aether": Item(id="fuel_bio_aether", name="Tabung Bio-Aether Traktor", category="material", description="Bahan bakar uap ramah lingkungan untuk traktor Aetherwyn (+100 Bahan Bakar).", buy_price=80, sell_price=35, stackable=True, icon_type="fuel_can"),
+
+    # Modern & Magical Tech & Blueprint Structures
     "tech_sprinkler_basic": Item(id="tech_sprinkler_basic", name="Crystal Sprinkler Mk.I", category="technology", description="Menyiram 4 petak di sekelilingnya setiap pagi secara otomatis.", buy_price=300, sell_price=150, stackable=True, icon_type="sprinkler"),
     "tech_sprinkler_modern": Item(id="tech_sprinkler_modern", name="Smart Aether Sprinkler Mk.II", category="technology", description="Menyiram 8 petak di sekitarnya dengan energi kristal.", buy_price=750, sell_price=350, stackable=True, icon_type="sprinkler_adv"),
+    "tech_irrigation_pipe": Item(id="tech_irrigation_pipe", name="Pipa Irigasi Aether Bawah Tanah", category="technology", description="Pipa air bertekanan mengalirkan air kolam ke seluruh sprinkler dan petak tanah.", buy_price=60, sell_price=25, stackable=True, icon_type="pipe"),
+    "tech_hydroponic_basin": Item(id="tech_hydroponic_basin", name="Bak Hidroponik Otomatis", category="technology", description="Media tanam kaya nutrisi cairan aether. Tumbuh sepanjang tahun tanpa tergantung musim.", buy_price=650, sell_price=300, stackable=True, icon_type="hydroponic"),
+    "tech_compost_bin": Item(id="tech_compost_bin", name="Bak Kompos Bio-Organik", category="technology", description="Mengolah sampah rumput dan sisa tanaman menjadi Pupuk Kompos Alami bermutu.", buy_price=250, sell_price=100, stackable=True, icon_type="compost"),
+    "tech_seed_extractor": Item(id="tech_seed_extractor", name="Mesin Ekstraksi Benih", category="technology", description="Memisahkan biji unggul dari panen menjadi 2-3 bibit berkualitas tinggi.", buy_price=550, sell_price=240, stackable=True, icon_type="seed_extractor"),
+    "tech_auto_harvester": Item(id="tech_auto_harvester", name="Menara Panen Otomatis", category="technology", description="Memanen tanaman matang di radius 5x5 otomatis setiap fajar.", buy_price=1400, sell_price=650, stackable=True, icon_type="auto_harvester"),
+    "tech_mana_pylon": Item(id="tech_mana_pylon", name="Menara Pylon Daya Aether", category="technology", description="Memancarkan medan resonansi daya listrik nirkabel ke mesin pertanian.", buy_price=900, sell_price=400, stackable=True, icon_type="pylon"),
     "tech_aether_generator": Item(id="tech_aether_generator", name="Generator Daya Aether", category="technology", description="Pembangkit daya listrik mikro untuk lampu dan otomasi.", buy_price=1500, sell_price=700, stackable=False, icon_type="generator"),
     "tech_street_lamp": Item(id="tech_street_lamp", name="Lampu Jalan LED Modern", category="technology", description="Menerangi malam hari secara otomatis.", buy_price=180, sell_price=80, stackable=True, icon_type="lamp"),
+    "tech_storage_chest": Item(id="tech_storage_chest", name="Peti Kayu Kuat", category="technology", description="Peti penyimpanan ekstra untuk hasil panen dan perkakas.", buy_price=100, sell_price=40, stackable=True, icon_type="chest"),
+    "tech_fence_wood": Item(id="tech_fence_wood", name="Pagar Kayu Paddock", category="technology", description="Pagar kayu pelindung petak tanaman dan batas peternakan.", buy_price=20, sell_price=8, stackable=True, icon_type="fence"),
     "item_fellowship_medal": Item(id="item_fellowship_medal", name="Medali Harmoni Aetherwyn", category="material", description="Simbol persaudaraan dan cinta sejati dengan seluruh warga desa.", buy_price=0, sell_price=1200, stackable=False, icon_type="medal"),
 }
 
@@ -143,6 +199,27 @@ class EvergreenGameEngine:
                     elif rand_val < 0.30:
                         tile_type = "obstacle_wood"
 
+                # Tree placements on farm perimeter
+                tree_type = None
+                tree_stage = 0
+                tree_hp = 3
+                if (x, y) == (1, 1):
+                    tree_type, tree_stage = "oak", 2
+                elif (x, y) == (4, 1):
+                    tree_type, tree_stage = "pine", 2
+                elif (x, y) == (1, 5):
+                    tree_type, tree_stage = "cherry", 2
+                elif (x, y) == (14, 8):
+                    tree_type, tree_stage = "birch", 2
+                elif (x, y) == (14, 14):
+                    tree_type, tree_stage = "lumina", 2
+                elif (x, y) == (1, 14):
+                    tree_type, tree_stage = "willow", 2
+                elif (x, y) == (5, 1):
+                    tree_type, tree_stage = "golden_apple", 2
+                elif (x, y) == (14, 1):
+                    tree_type, tree_stage = "ironbark", 2
+
                 # Pre-tilled plot with starter parsnips for immediate fun
                 if (x, y) == (7, 7):
                     tile_type = "watered"
@@ -156,13 +233,24 @@ class EvergreenGameEngine:
                 elif (x, y) == (8, 8):
                     tile_type = "watered"
                     crop = {"crop_id": "crop_beetroot", "stage": 4, "max_stage": 4, "days_grown": 4, "watered_today": True}
+                elif (x, y) == (9, 7):
+                    tile_type = "watered"
+                    crop = {"crop_id": "crop_wheat", "stage": 4, "max_stage": 4, "days_grown": 4, "watered_today": True}
+                elif (x, y) == (9, 8):
+                    tile_type = "watered"
+                    crop = {"crop_id": "crop_golden_pumpkin", "stage": 3, "max_stage": 4, "days_grown": 5, "watered_today": True}
 
                 row.append({
                     "x": x,
                     "y": y,
                     "tile_type": tile_type,
                     "crop": crop,
-                    "structure_type": structure
+                    "structure_type": structure,
+                    "tree_type": tree_type,
+                    "tree_stage": tree_stage,
+                    "tree_hp": tree_hp,
+                    "fertilizer_type": None,
+                    "water_piped": False
                 })
             grid.append(row)
         return grid
@@ -190,15 +278,30 @@ class EvergreenGameEngine:
                 {"item_id": "tool_sword", "count": 1},
                 {"item_id": "seed_parsnip", "count": 8},
                 {"item_id": "seed_beetroot", "count": 8},
-                {"item_id": "seed_strawberry", "count": 4},
+                {"item_id": "seed_wheat", "count": 10},
+                {"item_id": "item_fertilizer_organic", "count": 6},
+                {"item_id": "sapling_cherry", "count": 2},
+                {"item_id": "sapling_lumina", "count": 1},
                 {"item_id": "crop_parsnip", "count": 2},
                 {"item_id": "crop_beetroot", "count": 4},
                 {"item_id": "mat_wood", "count": 24},
                 {"item_id": "mat_stone", "count": 16},
-                {"item_id": "tech_sprinkler_basic", "count": 1},
-                None, None, None, None, None, None, None, None, None, None, None
+                {"item_id": "tech_sprinkler_basic", "count": 2},
+                {"item_id": "fuel_bio_aether", "count": 3},
+                None, None, None, None, None, None, None
             ],
-            "equipped_index": 0
+            "equipped_index": 0,
+            "tractor": {
+                "owned": True,
+                "mounted": False,
+                "x": 6 * 40,
+                "y": 5 * 40,
+                "dir": "down",
+                "attachment": "tiller",  # tiller, sprayer, mower
+                "fuel": 100,
+                "max_fuel": 100,
+                "speed_boost": 1.75
+            }
         }
 
         initial_world = {
@@ -304,7 +407,19 @@ class EvergreenGameEngine:
         self.save_slots[1] = default_save
 
     def get_save(self, slot_id: int) -> Optional[GameSave]:
-        return self.save_slots.get(slot_id)
+        save = self.save_slots.get(slot_id)
+        if save:
+            if "tractor" not in save.player or not save.player.get("tractor"):
+                save.player["tractor"] = {
+                    "owned": True,
+                    "mounted": False,
+                    "x": 11,
+                    "y": 8,
+                    "attachment": "tiller",
+                    "fuel": 100,
+                    "speed_boost": 1.75
+                }
+        return save
 
     def save_game(self, slot_id: int, payload: Dict[str, Any]) -> GameSave:
         save_obj = GameSave(
@@ -501,6 +616,242 @@ CRAFTING_RECIPES = [
         "category": "Lighting",
         "materials": [{"item_id": "mat_wood", "count": 8}, {"item_id": "mat_aether_crystal", "count": 1}],
         "unlocked_by_era": 4
+    },
+    {
+        "result_item_id": "tech_irrigation_pipe",
+        "result_count": 3,
+        "name": "Pipa Irigasi Aether Bawah Tanah",
+        "category": "Technology",
+        "materials": [{"item_id": "mat_copper_ore", "count": 2}, {"item_id": "mat_stone", "count": 4}],
+        "unlocked_by_era": 1
+    },
+    {
+        "result_item_id": "tech_hydroponic_basin",
+        "result_count": 1,
+        "name": "Bak Hidroponik Otomatis",
+        "category": "Technology",
+        "materials": [{"item_id": "mat_iron_ore", "count": 4}, {"item_id": "mat_aether_crystal", "count": 1}, {"item_id": "crop_parsnip", "count": 3}],
+        "unlocked_by_era": 2
+    },
+    {
+        "result_item_id": "tech_compost_bin",
+        "result_count": 1,
+        "name": "Bak Kompos Bio-Organik",
+        "category": "Technology",
+        "materials": [{"item_id": "mat_wood", "count": 12}, {"item_id": "mat_stone", "count": 8}],
+        "unlocked_by_era": 1
+    },
+    {
+        "result_item_id": "item_fertilizer_organic",
+        "result_count": 4,
+        "name": "Pupuk Kompos Bio-Organik",
+        "category": "Farming",
+        "materials": [{"item_id": "mat_tree_sap", "count": 2}, {"item_id": "mat_stone", "count": 2}],
+        "unlocked_by_era": 1
+    },
+    {
+        "result_item_id": "item_fertilizer_speed",
+        "result_count": 2,
+        "name": "Eliksir Percepat Tumbuh Aether",
+        "category": "Farming",
+        "materials": [{"item_id": "mat_mystic_sap", "count": 1}, {"item_id": "mat_aether_crystal", "count": 1}],
+        "unlocked_by_era": 2
+    },
+    {
+        "result_item_id": "tech_tractor_tiller",
+        "result_count": 1,
+        "name": "Mata Bajak Tiller Traktor",
+        "category": "Vehicle",
+        "materials": [{"item_id": "mat_iron_ore", "count": 6}, {"item_id": "mat_wood", "count": 10}],
+        "unlocked_by_era": 2
+    },
+    {
+        "result_item_id": "tech_tractor_sprayer",
+        "result_count": 1,
+        "name": "Tangki Semprot Air Traktor",
+        "category": "Vehicle",
+        "materials": [{"item_id": "mat_copper_ore", "count": 5}, {"item_id": "mat_iron_ore", "count": 4}],
+        "unlocked_by_era": 2
+    },
+    {
+        "result_item_id": "tech_tractor_mower",
+        "result_count": 1,
+        "name": "Pisau Pemanen Otomatis Traktor",
+        "category": "Vehicle",
+        "materials": [{"item_id": "mat_iron_ore", "count": 8}, {"item_id": "mat_aether_crystal", "count": 2}],
+        "unlocked_by_era": 3
+    },
+    {
+        "result_item_id": "fuel_bio_aether",
+        "result_count": 2,
+        "name": "Tabung Bio-Aether Traktor",
+        "category": "Vehicle",
+        "materials": [{"item_id": "mat_resin", "count": 2}, {"item_id": "mat_aether_crystal", "count": 1}],
+        "unlocked_by_era": 2
+    },
+    {
+        "result_item_id": "sapling_cherry",
+        "result_count": 1,
+        "name": "Sapling Pohon Sakura Harum",
+        "category": "Nature",
+        "materials": [{"item_id": "mat_wood", "count": 5}, {"item_id": "mat_tree_sap", "count": 2}],
+        "unlocked_by_era": 1
+    },
+    {
+        "result_item_id": "sapling_lumina",
+        "result_count": 1,
+        "name": "Sapling Pohon Lumina Roh",
+        "category": "Nature",
+        "materials": [{"item_id": "mat_aether_crystal", "count": 2}, {"item_id": "mat_mystic_sap", "count": 2}],
+        "unlocked_by_era": 2
+    }
+]
+
+# Blueprint Structures Catalog (Interactive Construction & CAD Overlay)
+BLUEPRINT_CATALOG = [
+    {
+        "id": "struct_sprinkler_basic",
+        "name": "Crystal Sprinkler Mk.I",
+        "category": "Irigasi",
+        "icon": "💧",
+        "footprint": {"w": 1, "h": 1},
+        "range_radius": 1,
+        "description": "Menyiram 8 petak di sekelilingnya (3x3 area) secara otomatis setiap fajar.",
+        "cost_gold": 150,
+        "materials": [{"item_id": "mat_copper_ore", "count": 2}, {"item_id": "mat_wood", "count": 5}],
+        "unlocked_era": 1
+    },
+    {
+        "id": "struct_sprinkler_modern",
+        "name": "Smart Aether Sprinkler Mk.II",
+        "category": "Irigasi",
+        "icon": "⚙️",
+        "footprint": {"w": 1, "h": 1},
+        "range_radius": 2,
+        "description": "Menyiram area luas 5x5 petak berkat nosel kabut bertenaga kristal.",
+        "cost_gold": 450,
+        "materials": [{"item_id": "mat_iron_ore", "count": 4}, {"item_id": "mat_aether_crystal", "count": 1}],
+        "unlocked_era": 2
+    },
+    {
+        "id": "struct_irrigation_pipe",
+        "name": "Jalur Pipa Irigasi Aether",
+        "category": "Irigasi",
+        "icon": "🚰",
+        "footprint": {"w": 1, "h": 1},
+        "range_radius": 0,
+        "description": "Pipa air bertekanan mengalirkan air kolam alami langsung ke petak tanaman.",
+        "cost_gold": 40,
+        "materials": [{"item_id": "mat_copper_ore", "count": 1}, {"item_id": "mat_stone", "count": 2}],
+        "unlocked_era": 1
+    },
+    {
+        "id": "struct_hydroponic_basin",
+        "name": "Bak Hidroponik Otomatis",
+        "category": "Pertanian Maju",
+        "icon": "🌱",
+        "footprint": {"w": 1, "h": 1},
+        "range_radius": 0,
+        "description": "Media tanam kaya nutrisi cairan aether. Tumbuh sepanjang tahun tanpa tergantung musim.",
+        "cost_gold": 600,
+        "materials": [{"item_id": "mat_iron_ore", "count": 4}, {"item_id": "mat_aether_crystal", "count": 2}],
+        "unlocked_era": 2
+    },
+    {
+        "id": "struct_auto_harvester",
+        "name": "Menara Panen Otomatis",
+        "category": "Otomasi",
+        "icon": "🤖",
+        "footprint": {"w": 1, "h": 1},
+        "range_radius": 2,
+        "description": "Sensor kristal memetik tanaman matang otomatis saat fajar dan menyimpannya di peti.",
+        "cost_gold": 1200,
+        "materials": [{"item_id": "mat_gold_ore", "count": 3}, {"item_id": "mat_aether_crystal", "count": 3}],
+        "unlocked_era": 3
+    },
+    {
+        "id": "struct_compost_bin",
+        "name": "Bak Kompos Bio-Organik",
+        "category": "Pertanian Maju",
+        "icon": "🍃",
+        "footprint": {"w": 1, "h": 1},
+        "range_radius": 0,
+        "description": "Menghasilkan Pupuk Kompos Alami berkualitas tinggi setiap hari.",
+        "cost_gold": 200,
+        "materials": [{"item_id": "mat_wood", "count": 15}, {"item_id": "mat_stone", "count": 10}],
+        "unlocked_era": 1
+    },
+    {
+        "id": "struct_seed_extractor",
+        "name": "Mesin Ekstraksi Benih",
+        "category": "Otomasi",
+        "icon": "🔬",
+        "footprint": {"w": 1, "h": 1},
+        "range_radius": 0,
+        "description": "Memisahkan biji unggul dari hasil panen, menghasilkan 2-3 bibit berkualitas.",
+        "cost_gold": 500,
+        "materials": [{"item_id": "mat_iron_ore", "count": 4}, {"item_id": "mat_copper_ore", "count": 4}],
+        "unlocked_era": 2
+    },
+    {
+        "id": "struct_mana_pylon",
+        "name": "Menara Pylon Daya Aether",
+        "category": "Energi",
+        "icon": "⚡",
+        "footprint": {"w": 1, "h": 1},
+        "range_radius": 4,
+        "description": "Memancarkan medan resonansi daya listrik nirkabel ke seluruh mesin pertanian.",
+        "cost_gold": 800,
+        "materials": [{"item_id": "mat_aether_crystal", "count": 4}, {"item_id": "mat_iron_ore", "count": 6}],
+        "unlocked_era": 3
+    },
+    {
+        "id": "struct_street_lamp",
+        "name": "Lampu Kristal Jalanan",
+        "category": "Dekorasi",
+        "icon": "🏮",
+        "footprint": {"w": 1, "h": 1},
+        "range_radius": 3,
+        "description": "Menerangi malam hari secara otomatis dengan cahaya hangat menenangkan.",
+        "cost_gold": 100,
+        "materials": [{"item_id": "mat_wood", "count": 6}, {"item_id": "mat_copper_ore", "count": 1}],
+        "unlocked_era": 1
+    },
+    {
+        "id": "struct_storage_chest",
+        "name": "Peti Kayu Kuat",
+        "category": "Penyimpanan",
+        "icon": "📦",
+        "footprint": {"w": 1, "h": 1},
+        "range_radius": 0,
+        "description": "Peti penyimpanan aman untuk menyimpan cadangan hasil panen dan perkakas.",
+        "cost_gold": 80,
+        "materials": [{"item_id": "mat_wood", "count": 20}],
+        "unlocked_era": 1
+    },
+    {
+        "id": "struct_fence_wood",
+        "name": "Pagar Kayu Paddock",
+        "category": "Dekorasi",
+        "icon": "🪵",
+        "footprint": {"w": 1, "h": 1},
+        "range_radius": 0,
+        "description": "Pagar rapi untuk menandai batas petak tanaman dan kandang ternak.",
+        "cost_gold": 15,
+        "materials": [{"item_id": "mat_wood", "count": 2}],
+        "unlocked_era": 1
+    },
+    {
+        "id": "struct_tractor_garage",
+        "name": "Garasi Traktor & Servis",
+        "category": "Kendaraan",
+        "icon": "🚜",
+        "footprint": {"w": 2, "h": 2},
+        "range_radius": 0,
+        "description": "Tempat parkir, pengisian uap/bahan bakar, dan pergantian attachment traktor.",
+        "cost_gold": 1500,
+        "materials": [{"item_id": "mat_iron_ore", "count": 10}, {"item_id": "mat_stone", "count": 25}],
+        "unlocked_era": 2
     }
 ]
 
