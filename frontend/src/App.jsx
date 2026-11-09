@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import MainMenu from './components/MainMenu';
 import HUD from './components/HUD';
 import Quickbar from './components/Quickbar';
 import GameCanvas from './game/GameCanvas';
@@ -17,6 +18,9 @@ import { sounds } from './game/SoundFx';
 import { multiplayer } from './game/MultiplayerManager';
 
 export default function App() {
+  const [inGame, setInGame] = useState(false);
+  const [lang, setLang] = useState(() => localStorage.getItem('eg_lang') || 'id');
+
   const [gameState, setGameState] = useState(null);
   const [itemCatalog, setItemCatalog] = useState({});
   const [craftingRecipes, setCraftingRecipes] = useState([]);
@@ -55,7 +59,12 @@ export default function App() {
     setIsMuted(muted);
   };
 
-  // Initialize Game Data & Multiplayer
+  const handleSetLang = (newLang) => {
+    setLang(newLang);
+    localStorage.setItem('eg_lang', newLang);
+  };
+
+  // Initialize Game Data
   useEffect(() => {
     async function initGameData() {
       try {
@@ -73,10 +82,6 @@ export default function App() {
           setItemCatalog(itemsData);
           setCraftingRecipes(recipesData);
           setGameState(saveData);
-
-          // Connect to Multiplayer WebSocket
-          const playerName = saveData.player?.name || 'Fahmi';
-          multiplayer.connect(playerName, '#3b82f6');
         }
       } catch (err) {
         console.error('Error connecting to backend engine:', err);
@@ -101,7 +106,7 @@ export default function App() {
 
   // Periodic Auto-Save
   useEffect(() => {
-    if (!gameState) return;
+    if (!gameState || !inGame) return;
     const interval = setInterval(async () => {
       try {
         await fetch('/api/v1/game/save/1', {
@@ -115,11 +120,12 @@ export default function App() {
     }, 45000);
 
     return () => clearInterval(interval);
-  }, [gameState]);
+  }, [gameState, inGame]);
 
   // Global Keyboard Shortcuts
   useEffect(() => {
     const handleGlobalKeys = (e) => {
+      if (!inGame) return;
       if (['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) return;
 
       if (e.code === 'KeyE') {
@@ -162,7 +168,28 @@ export default function App() {
 
     window.addEventListener('keydown', handleGlobalKeys);
     return () => window.removeEventListener('keydown', handleGlobalKeys);
-  }, []);
+  }, [inGame]);
+
+  const handleStartSingleplayer = () => {
+    if (gameState) {
+      multiplayer.connect(gameState.player?.name || 'Fahmi', '#3b82f6');
+    }
+    setInGame(true);
+  };
+
+  const handleStartMultiplayer = (customName, customColor) => {
+    if (gameState) {
+      setGameState({
+        ...gameState,
+        player: {
+          ...gameState.player,
+          name: customName || 'Pengelana'
+        }
+      });
+      multiplayer.connect(customName || 'Pengelana', customColor || '#3b82f6');
+    }
+    setInGame(true);
+  };
 
   const handleSelfChat = (text) => {
     setLocalChatBubble(text);
@@ -174,20 +201,28 @@ export default function App() {
   const equippedSlot = gameState?.player?.inventory?.[gameState.player.equipped_index];
   const equippedItemMeta = equippedSlot ? itemCatalog[equippedSlot.item_id] : null;
 
-  if (loading || !gameState) {
+  // 1. MAIN TITLE MENU SCREEN (Not in game)
+  if (!inGame) {
     return (
-      <div className="h-screen w-screen flex flex-col items-center justify-center bg-stone-950 text-amber-200">
-        <span className="text-5xl animate-bounce mb-3">🌲</span>
-        <h1 className="text-2xl font-bold font-medieval tracking-wider">
-          EVERGREEN CHRONICLES ONLINE
-        </h1>
-        <p className="text-xs text-stone-400 mt-2 font-mono">
-          Menghubungkan ke server desa Aetherwyn & sinkronisasi multiplayer...
-        </p>
-      </div>
+      <>
+        <MainMenu
+          onStartSingleplayer={handleStartSingleplayer}
+          onStartMultiplayer={handleStartMultiplayer}
+          onOpenControls={() => setGuideOpen(true)}
+          lang={lang}
+          setLang={handleSetLang}
+          isAudioMuted={isMuted}
+          onToggleAudio={handleToggleMute}
+        />
+        <ControlsGuideModal
+          isOpen={guideOpen}
+          onClose={() => setGuideOpen(false)}
+        />
+      </>
     );
   }
 
+  // 2. IN-GAME SCREEN
   return (
     <div className="h-screen w-screen flex flex-col justify-between bg-stone-950 text-stone-100 overflow-hidden select-none font-sans relative">
       {/* 1. TOP HUD */}
@@ -202,10 +237,13 @@ export default function App() {
         onOpenBed={() => setBedOpen(true)}
         onOpenGuide={() => setGuideOpen(true)}
         onOpenRoster={() => setRosterOpen(true)}
+        onReturnToMenu={() => setInGame(false)}
         onlineCount={onlineCount}
         pingMs={pingMs}
         isMuted={isMuted}
         onToggleMute={handleToggleMute}
+        lang={lang}
+        setLang={handleSetLang}
       />
 
       {/* 2. MAIN GAME CANVAS & ONLINE PLAYERS */}

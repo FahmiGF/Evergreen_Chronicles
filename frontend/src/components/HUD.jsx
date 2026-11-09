@@ -1,5 +1,6 @@
 import React from 'react';
 import { sounds } from '../game/SoundFx';
+import { translations } from '../i18n/translations';
 
 export default function HUD({
   gameState,
@@ -12,13 +13,17 @@ export default function HUD({
   onOpenBed,
   onOpenGuide,
   onOpenRoster,
+  onReturnToMenu,
   onlineCount,
   pingMs,
   isMuted,
-  onToggleMute
+  onToggleMute,
+  lang,
+  setLang
 }) {
   if (!gameState || !gameState.player || !gameState.world) return null;
 
+  const t = translations[lang] || translations.id;
   const { player, world } = gameState;
   const hpPct = Math.round((player.hp / player.max_hp) * 100);
   const staminaPct = Math.round((player.stamina / player.max_stamina) * 100);
@@ -39,32 +44,19 @@ export default function HUD({
   };
 
   return (
-    <header className="w-full bg-stone-900/90 backdrop-blur-md border-b-2 border-amber-900/60 px-4 py-2 flex flex-wrap items-center justify-between text-xs sm:text-sm select-none z-30 shadow-lg">
+    <header className="w-full bg-stone-900/90 backdrop-blur-md border-b-2 border-amber-900/60 px-3 py-1.5 flex flex-wrap items-center justify-between text-xs sm:text-sm select-none z-30 shadow-lg">
       {/* 1. CALENDAR, TIME, WEATHER & ONLINE BADGE */}
-      <div className="flex items-center space-x-2.5">
-        <div className="bg-amber-950/80 border border-amber-700/60 rounded-lg px-2.5 py-1 flex items-center space-x-2 text-amber-100 shadow-inner">
+      <div className="flex items-center space-x-2">
+        <div className="bg-amber-950/80 border border-amber-700/60 rounded-lg px-2 py-1 flex items-center space-x-1.5 text-amber-100 shadow-inner">
           <span className="text-base">{getWeatherIcon(world.weather)}</span>
           <div>
             <div className="font-semibold text-amber-300">
-              {world.season} {world.day}, Thn {world.year}
+              {world.season} {world.day}, {t.hud.year} {world.year}
             </div>
             <div className="text-amber-200/80 font-mono text-[11px]">
               {formatTime(world.time_hour, world.time_minute)}
             </div>
           </div>
-        </div>
-
-        {/* ERA BADGE */}
-        <div className="hidden lg:flex flex-col">
-          <div className="flex items-center space-x-1.5">
-            <span className="inline-block w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse" />
-            <span className="text-xs font-bold text-cyan-300 tracking-wide">
-              {world.era_name.split('—')[0]}
-            </span>
-          </div>
-          <span className="text-[10px] text-stone-400 truncate max-w-[170px]">
-            {world.era_name.split('—')[1] || 'Peradaban Awal'}
-          </span>
         </div>
 
         {/* MULTIPLAYER ONLINE BADGE */}
@@ -75,19 +67,41 @@ export default function HUD({
         >
           <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
           <span className="font-bold text-xs text-cyan-300 font-mono">
-            👥 {onlineCount || 1} Online
+            👥 {onlineCount || 1} {t.hud.online}
           </span>
           <span className="text-[10px] text-stone-400 font-mono hidden sm:inline">
             ({pingMs || 5}ms)
           </span>
         </button>
+
+        {/* LANGUAGE QUICK SELECTOR */}
+        <div className="hidden md:flex items-center space-x-1 bg-stone-800/80 px-1.5 py-0.5 rounded-lg border border-stone-700">
+          <button
+            onClick={() => setLang('id')}
+            className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${lang === 'id' ? 'bg-amber-600 text-white' : 'text-stone-400'}`}
+          >
+            ID
+          </button>
+          <button
+            onClick={() => setLang('en')}
+            className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${lang === 'en' ? 'bg-amber-600 text-white' : 'text-stone-400'}`}
+          >
+            EN
+          </button>
+          <button
+            onClick={() => setLang('ja')}
+            className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${lang === 'ja' ? 'bg-amber-600 text-white' : 'text-stone-400'}`}
+          >
+            JA
+          </button>
+        </div>
       </div>
 
       {/* 2. PLAYER HEALTH & STAMINA BARS */}
-      <div className="flex items-center space-x-2.5 my-1 sm:my-0">
-        <div className="w-24 sm:w-32">
-          <div className="flex justify-between text-[11px] mb-0.5 font-bold">
-            <span className="text-rose-400">❤️ HP</span>
+      <div className="flex items-center space-x-2 my-1 sm:my-0">
+        <div className="w-20 sm:w-28">
+          <div className="flex justify-between text-[10px] mb-0.5 font-bold">
+            <span className="text-rose-400">❤️ {t.hud.hp}</span>
             <span className="text-stone-300">{player.hp}/{player.max_hp}</span>
           </div>
           <div className="h-2 w-full bg-stone-800 rounded-full overflow-hidden border border-rose-900/50">
@@ -98,9 +112,9 @@ export default function HUD({
           </div>
         </div>
 
-        <div className="w-24 sm:w-32">
-          <div className="flex justify-between text-[11px] mb-0.5 font-bold">
-            <span className="text-emerald-400">⚡ STM</span>
+        <div className="w-20 sm:w-28">
+          <div className="flex justify-between text-[10px] mb-0.5 font-bold">
+            <span className="text-emerald-400">⚡ {t.hud.stamina}</span>
             <span className="text-stone-300">{player.stamina}/{player.max_stamina}</span>
           </div>
           <div className="h-2 w-full bg-stone-800 rounded-full overflow-hidden border border-emerald-900/50">
@@ -113,13 +127,13 @@ export default function HUD({
       </div>
 
       {/* 3. CURRENCY: GOLD & AETHER SHARDS */}
-      <div className="flex items-center space-x-2">
-        <div className="flex items-center space-x-1.5 bg-stone-800/90 border border-amber-600/40 rounded-lg px-2 py-1 text-amber-300 font-bold font-mono">
+      <div className="flex items-center space-x-1.5">
+        <div className="flex items-center space-x-1 bg-stone-800/90 border border-amber-600/40 rounded-lg px-2 py-0.5 text-amber-300 font-bold font-mono text-xs">
           <span>🪙</span>
           <span>{player.gold.toLocaleString()} G</span>
         </div>
 
-        <div className="flex items-center space-x-1 bg-stone-800/90 border border-cyan-500/40 rounded-lg px-2 py-1 text-cyan-300 font-bold font-mono">
+        <div className="flex items-center space-x-1 bg-stone-800/90 border border-cyan-500/40 rounded-lg px-2 py-0.5 text-cyan-300 font-bold font-mono text-xs">
           <span>💎</span>
           <span>{player.aether_shards || 0}</span>
         </div>
@@ -129,63 +143,63 @@ export default function HUD({
       <div className="flex items-center space-x-1">
         <button
           onClick={() => { sounds.playClick(); onOpenInventory(); }}
-          title="Buka Tas Ransel [E]"
+          title="Backpack [E]"
           className="bg-stone-800 hover:bg-stone-700 text-stone-200 border border-stone-600 px-2 py-1 rounded-md text-xs font-semibold transition"
         >
-          🎒 Tas
+          🎒 {t.hud.backpack}
         </button>
 
         <button
           onClick={() => { sounds.playClick(); onOpenCrafting(); }}
-          title="Buka Meja Kerajinan [C]"
+          title="Crafting [C]"
           className="bg-stone-800 hover:bg-stone-700 text-stone-200 border border-stone-600 px-2 py-1 rounded-md text-xs font-semibold transition"
         >
-          🔨 Craft
+          🔨 {t.hud.craft}
         </button>
 
         <button
           onClick={() => { sounds.playClick(); onOpenCooking(); }}
-          title="Dapur Memasak [K]"
+          title="Cooking [K]"
           className="bg-amber-950/70 hover:bg-amber-900 text-amber-200 border border-amber-700 px-2 py-1 rounded-md text-xs font-semibold transition"
         >
-          🍲 Masak
+          🍲 {t.hud.cook}
         </button>
 
         <button
           onClick={() => { sounds.playClick(); onOpenFishing(); }}
-          title="Memancing Ikan [F]"
+          title="Fishing [F]"
           className="bg-cyan-950/70 hover:bg-cyan-900 text-cyan-200 border border-cyan-700 px-2 py-1 rounded-md text-xs font-semibold transition"
         >
-          🎣 Pancing
+          🎣 {t.hud.fish}
         </button>
 
         <button
           onClick={() => { sounds.playClick(); onOpenTechTree(); }}
-          title="Pohon Teknologi & Era [T]"
+          title="Tech Tree [T]"
           className="bg-cyan-950/70 hover:bg-cyan-900 text-cyan-200 border border-cyan-600 px-2 py-1 rounded-md text-xs font-semibold transition hidden sm:inline-flex"
         >
-          🔬 Riset
+          🔬 {t.hud.tech}
         </button>
 
         <button
           onClick={() => { sounds.playClick(); onOpenDungeon(); }}
-          title="Jelajahi Gua Tambang & Monster [M]"
+          title="Mines Dungeon [M]"
           className="bg-rose-950/70 hover:bg-rose-900 text-rose-200 border border-rose-600 px-2 py-1 rounded-md text-xs font-semibold transition"
         >
-          ⚔️ Gua
+          ⚔️ {t.hud.mines}
         </button>
 
         <button
           onClick={() => { sounds.playClick(); onOpenBed(); }}
-          title="Tidur & Akhiri Hari [Z]"
+          title="Sleep [Z]"
           className="bg-amber-950/70 hover:bg-amber-900 text-amber-200 border border-amber-600 px-2 py-1 rounded-md text-xs font-semibold transition"
         >
-          🛏️ Tidur
+          🛏️ {t.hud.sleep}
         </button>
 
         <button
           onClick={() => { sounds.playClick(); onOpenGuide(); }}
-          title="Panduan Kontrol [H]"
+          title="Guide [H]"
           className="bg-stone-800 hover:bg-stone-700 text-stone-300 border border-stone-600 px-2 py-1 rounded-md text-xs font-semibold transition"
         >
           ❓
@@ -193,10 +207,18 @@ export default function HUD({
 
         <button
           onClick={onToggleMute}
-          title={isMuted ? 'Nyalakan Suara' : 'Matikan Suara'}
+          title={isMuted ? 'Unmute' : 'Mute'}
           className="bg-stone-800 hover:bg-stone-700 text-stone-300 border border-stone-600 px-2 py-1 rounded-md text-xs font-semibold transition"
         >
           {isMuted ? '🔇' : '🔊'}
+        </button>
+
+        <button
+          onClick={() => { sounds.playClick(); onReturnToMenu(); }}
+          title="Kembali ke Menu Utama"
+          className="bg-stone-800 hover:bg-rose-900/60 text-stone-300 hover:text-rose-200 border border-stone-600 px-2 py-1 rounded-md text-xs font-semibold transition"
+        >
+          🏠 Menu
         </button>
       </div>
     </header>
