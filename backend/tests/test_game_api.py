@@ -157,4 +157,77 @@ def test_tutorial_progression():
     assert data["gold_earned"] == 60
     assert data["current_gold"] == initial_gold + 60
 
+def test_npc_quests_and_turn_in_beetroots():
+    # 1. Fetch quests list
+    res_q = client.get("/api/v1/game/npc-quests/1")
+    assert res_q.status_code == 200
+    quests = res_q.json()
+    assert len(quests) >= 16
+
+    # Verify beetroot quest exists
+    beetroot_quest = next((q for q in quests if q["id"] == "quest_rowan_beetroots"), None)
+    assert beetroot_quest is not None
+    assert beetroot_quest["target_count"] == 5
+    assert beetroot_quest["target_item"] == "crop_beetroot"
+
+    # Give player 5 beetroots in inventory
+    save_data = client.get("/api/v1/game/save/1").json()
+    save_data["player"]["inventory"][0] = {"item_id": "crop_beetroot", "count": 6}
+    client.post("/api/v1/game/save/1", json=save_data)
+
+    # Turn in 5 beetroots quest
+    res_turnin = client.post("/api/v1/game/npc-quests/turn-in/1", json={"quest_id": "quest_rowan_beetroots"})
+    assert res_turnin.status_code == 200
+    data = res_turnin.json()
+    assert data["success"] is True
+    assert data["reward_gold"] == 320
+    assert "quest_rowan_beetroots" in data["completed_npc_quests"]
+
+def test_quest_having_friends_with_us():
+    # Ensure one NPC has level 5 or above
+    save_data = client.get("/api/v1/game/save/1").json()
+    for n in save_data["npcs"]:
+        if n["id"] == "npc_mira":
+            n["affection_level"] = 5
+            n["friendship_points"] = 500
+    client.post("/api/v1/game/save/1", json=save_data)
+
+    # Turn in "Having Friends with Us!"
+    res = client.post("/api/v1/game/npc-quests/turn-in/1", json={"quest_id": "quest_mira_friendship"})
+    assert res.status_code == 200
+    data = res.json()
+    assert data["success"] is True
+    assert data["reward_gold"] == 800
+    assert data["reward_item"] == "item_fellowship_medal"
+    assert len(data["affection_results"]) == 4  # Boosts all 4 NPCs!
+
+def test_storyline_chapters_and_trailer():
+    res = client.get("/api/v1/game/storyline/1")
+    assert res.status_code == 200
+    chapters = res.json()
+    assert len(chapters) >= 7
+
+    # Prologue trailer must be unlocked
+    prologue = next(c for c in chapters if c["id"] == "chap_prologue")
+    assert prologue["unlocked"] is True
+    assert len(prologue["scenes"]) >= 3
+
+    # Chapter 3 ("Having Friends with Us!") should now be unlocked since we satisfied it
+    chap3 = next(c for c in chapters if c["id"] == "chap_03")
+    assert chap3["unlocked"] is True
+
+def test_npc_gift_affection_level_up():
+    save_data = client.get("/api/v1/game/save/1").json()
+    save_data["player"]["inventory"][0] = {"item_id": "crop_strawberry", "count": 2}
+    client.post("/api/v1/game/save/1", json=save_data)
+
+    # Elara loves strawberries
+    res = client.post("/api/v1/game/npc/gift/1", json={"npc_id": "npc_elara", "item_id": "crop_strawberry"})
+    assert res.status_code == 200
+    data = res.json()
+    assert data["success"] is True
+    assert data["is_favorite"] is True
+    assert "affection_result" in data
+    assert data["affection_result"]["new_level"] <= 10
+
 

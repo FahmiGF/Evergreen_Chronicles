@@ -14,6 +14,9 @@ export default function HUD({
   onOpenBed,
   onOpenGuide,
   onOpenRoster,
+  onOpenStoryline,
+  onOpenQuestLog,
+  onOpenAffection,
   onReturnToMenu,
   onlineCount,
   pingMs,
@@ -189,6 +192,33 @@ export default function HUD({
         >
           <span>🗺️</span>
           <span>Peta</span>
+        </button>
+
+        <button
+          onClick={() => { sounds.playClick(); onOpenQuestLog && onOpenQuestLog(); }}
+          title="Papan Tugas Warga [Q]"
+          className="bg-amber-950/80 hover:bg-amber-900 text-amber-300 border border-amber-600 px-2 py-1 rounded-md text-xs font-semibold transition flex items-center space-x-1"
+        >
+          <span>📜</span>
+          <span>{t.hud.quests || 'Tugas'}</span>
+        </button>
+
+        <button
+          onClick={() => { sounds.playClick(); onOpenAffection && onOpenAffection(); }}
+          title="Tingkat Kasih Penduduk [U]"
+          className="bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-600 px-2 py-1 rounded-md text-xs font-semibold transition flex items-center space-x-1"
+        >
+          <span>❤️</span>
+          <span>{t.hud.affection || 'Warga'}</span>
+        </button>
+
+        <button
+          onClick={() => { sounds.playClick(); onOpenStoryline && onOpenStoryline(); }}
+          title="Alur Cerita & Sinematik [L]"
+          className="bg-amber-900/90 hover:bg-amber-800 text-amber-100 border border-amber-400 px-2 py-1 rounded-md text-xs font-semibold transition flex items-center space-x-1"
+        >
+          <span>🎬</span>
+          <span>{t.hud.storyline || 'Cerita'}</span>
         </button>
 
         <button

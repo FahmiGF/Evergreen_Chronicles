@@ -16,6 +16,9 @@ import RosterDrawer from './components/RosterDrawer';
 import OnlineChat from './components/OnlineChat';
 import WorldMapModal from './components/WorldMapModal';
 import TutorialGuide from './components/TutorialGuide';
+import QuestLogModal from './components/QuestLogModal';
+import AffectionModal from './components/AffectionModal';
+import StorylineModal from './components/StorylineModal';
 import { sounds } from './game/SoundFx';
 import { multiplayer } from './game/MultiplayerManager';
 
@@ -45,6 +48,9 @@ export default function App() {
   const [guideOpen, setGuideOpen] = useState(false);
   const [rosterOpen, setRosterOpen] = useState(false);
   const [worldMapOpen, setWorldMapOpen] = useState(false);
+  const [questLogOpen, setQuestLogOpen] = useState(false);
+  const [affectionOpen, setAffectionOpen] = useState(false);
+  const [storylineOpen, setStorylineOpen] = useState(false);
   const [currentZoneId, setCurrentZoneId] = useState('zone_farm');
   const [activeDialogueNpc, setActiveDialogueNpc] = useState(null);
 
@@ -153,6 +159,15 @@ export default function App() {
       } else if (e.code === 'KeyO') {
         e.preventDefault();
         setWorldMapOpen((prev) => !prev);
+      } else if (e.code === 'KeyQ') {
+        e.preventDefault();
+        setQuestLogOpen((prev) => !prev);
+      } else if (e.code === 'KeyU') {
+        e.preventDefault();
+        setAffectionOpen((prev) => !prev);
+      } else if (e.code === 'KeyL') {
+        e.preventDefault();
+        setStorylineOpen((prev) => !prev);
       } else if (e.code === 'KeyZ') {
         e.preventDefault();
         setBedOpen((prev) => !prev);
@@ -167,6 +182,9 @@ export default function App() {
         setTechTreeOpen(false);
         setDungeonOpen(false);
         setWorldMapOpen(false);
+        setQuestLogOpen(false);
+        setAffectionOpen(false);
+        setStorylineOpen(false);
         setBedOpen(false);
         setGuideOpen(false);
         setRosterOpen(false);
@@ -243,6 +261,9 @@ export default function App() {
         onOpenTechTree={() => setTechTreeOpen(true)}
         onOpenDungeon={() => setDungeonOpen(true)}
         onOpenWorldMap={() => setWorldMapOpen(true)}
+        onOpenQuestLog={() => setQuestLogOpen(true)}
+        onOpenAffection={() => setAffectionOpen(true)}
+        onOpenStoryline={() => setStorylineOpen(true)}
         onOpenBed={() => setBedOpen(true)}
         onOpenGuide={() => setGuideOpen(true)}
         onOpenRoster={() => setRosterOpen(true)}
@@ -422,6 +443,28 @@ export default function App() {
         onClose={() => setRosterOpen(false)}
         pingMs={pingMs}
         localPlayerName={gameState.player?.name}
+      />
+
+      <QuestLogModal
+        isOpen={questLogOpen}
+        onClose={() => setQuestLogOpen(false)}
+        gameState={gameState}
+        setGameState={setGameState}
+        showNotification={showNotification}
+        onOpenStoryline={() => setStorylineOpen(true)}
+      />
+
+      <AffectionModal
+        isOpen={affectionOpen}
+        onClose={() => setAffectionOpen(false)}
+        gameState={gameState}
+        onOpenDialogue={(npc) => setActiveDialogueNpc(npc)}
+        onOpenQuests={() => setQuestLogOpen(true)}
+      />
+
+      <StorylineModal
+        isOpen={storylineOpen}
+        onClose={() => setStorylineOpen(false)}
       />
 
       {/* 5. TOAST NOTIFICATION */}

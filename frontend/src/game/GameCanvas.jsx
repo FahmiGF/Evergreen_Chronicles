@@ -797,6 +797,24 @@ export default function GameCanvas({
         ctx.ellipse(tx + 17, ty + 23, 8, 6, 0, 0, Math.PI * 2);
         ctx.ellipse(tx + 23, ty + 24, 7, 5, 0, 0, Math.PI * 2);
         ctx.fill();
+      } else if (crop.crop_id === 'crop_beetroot') {
+        // Deep burgundy root with leafy top
+        ctx.fillStyle = '#831843';
+        ctx.beginPath();
+        ctx.ellipse(tx + 20, ty + 23, 9, 11, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#9d174d';
+        ctx.beginPath();
+        ctx.moveTo(tx + 18, ty + 30);
+        ctx.lineTo(tx + 20, ty + 34);
+        ctx.lineTo(tx + 22, ty + 30);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#15803d';
+        ctx.beginPath();
+        ctx.arc(tx + 17, ty + 14, 4, 0, Math.PI * 2);
+        ctx.arc(tx + 23, ty + 14, 4, 0, Math.PI * 2);
+        ctx.fill();
       } else {
         ctx.fillStyle = '#a855f7';
         ctx.beginPath();

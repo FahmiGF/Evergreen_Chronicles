@@ -18,24 +18,68 @@ export default function DialogueBox({
   const [isVoiceMuted, setIsVoiceMuted] = useState(false);
   const [activeTopic, setActiveTopic] = useState('greeting');
   const [loadingTopic, setLoadingTopic] = useState(false);
+  const [dialogueTab, setDialogueTab] = useState('talk'); // 'talk' or 'quests'
+  const [npcQuests, setNpcQuests] = useState([]);
+  const [turningInId, setTurningInId] = useState(null);
 
   const inventory = gameState?.player?.inventory || [];
-  const hearts = Math.floor(((npc && npc.friendship_points) || 0) / 250);
+  const currentNpc = (gameState?.npcs || []).find((n) => n.id === npc?.id) || npc;
+  const affectionLevel = Math.min(
+    10,
+    Math.max(
+      0,
+      currentNpc?.affection_level !== undefined
+        ? currentNpc.affection_level
+        : Math.floor((currentNpc?.friendship_points || 0) / 100)
+    )
+  );
 
-  const voiceProfile = npc ? voiceAi.getNpcVoiceProfile(npc.id) : null;
+  const voiceProfile = currentNpc ? voiceAi.getNpcVoiceProfile(currentNpc.id) : null;
+
+  const getAffectionTitle = (lvl) => {
+    switch (lvl) {
+      case 0: return 'Orang Asing';
+      case 1: return 'Kenalan Baru';
+      case 2: return 'Tetangga Ramah';
+      case 3: return 'Teman Baik';
+      case 4: return 'Sahabat Terpercaya';
+      case 5: return 'Jiwa Sepemikiran';
+      case 6: return 'Orang Kepercayaan';
+      case 7: return 'Rekan Sejati';
+      case 8: return 'Mitra Kasih';
+      case 9: return 'Ikatan Abadi';
+      case 10: return 'Soulmate of Aetherwyn';
+      default: return 'Warga Desa';
+    }
+  };
+
+  // Fetch quests for this NPC
+  const fetchNpcQuests = async () => {
+    if (!currentNpc) return;
+    try {
+      const res = await fetch('/api/v1/game/npc-quests/1');
+      if (res.ok) {
+        const data = await res.json();
+        setNpcQuests(data.filter((q) => q.npc_id === currentNpc.id));
+      }
+    } catch (e) {
+      console.error('Failed to load NPC quests', e);
+    }
+  };
 
   // Speak greeting on initial modal open
   useEffect(() => {
-    if (isOpen && npc) {
-      const initialText = npc.dialogue || `Selamat datang di desa Aetherwyn! Aku ${npc.name}, senang bertemu denganmu.`;
+    if (isOpen && currentNpc) {
+      const initialText = currentNpc.dialogue || `Selamat datang di desa Aetherwyn! Aku ${currentNpc.name}, senang bertemu denganmu.`;
       setCurrentDialogueText(initialText);
       setActiveTopic('greeting');
+      setDialogueTab('talk');
+      fetchNpcQuests();
 
-      // Play Voice AI after a tiny delay for browser user activation
       const timer = setTimeout(() => {
         voiceAi.speak(
           initialText,
-          npc.id,
+          currentNpc.id,
           () => setIsSpeaking(true),
           () => setIsSpeaking(false)
         );
@@ -47,19 +91,9 @@ export default function DialogueBox({
         setIsSpeaking(false);
       };
     }
-  }, [isOpen, npc]);
+  }, [isOpen, currentNpc?.id]);
 
-  if (!isOpen || !npc || !gameState) return null;
-
-  const getNpcAvatar = (npcId) => {
-    switch (npcId) {
-      case 'npc_elara': return '🌿';
-      case 'npc_rowan': return '🔨';
-      case 'npc_nessa': return '⚡';
-      case 'npc_mira': return '🍎';
-      default: return '👤';
-    }
-  };
+  if (!isOpen || !currentNpc || !gameState) return null;
 
   const handleSelectTopic = async (topicKey) => {
     if (loadingTopic) return;
@@ -71,16 +105,15 @@ export default function DialogueBox({
       const res = await fetch('/api/v1/game/npc-dialogue-ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ npc_id: npc.id, topic: topicKey })
+        body: JSON.stringify({ npc_id: currentNpc.id, topic: topicKey })
       });
       const data = await res.json();
       const textToSpeak = data.spoken_text || 'Terima kasih telah bertanya!';
       setCurrentDialogueText(textToSpeak);
 
-      // Trigger Voice AI Speech
       voiceAi.speak(
         textToSpeak,
-        npc.id,
+        currentNpc.id,
         () => setIsSpeaking(true),
         () => setIsSpeaking(false)
       );
@@ -96,7 +129,7 @@ export default function DialogueBox({
     if (!currentDialogueText) return;
     voiceAi.speak(
       currentDialogueText,
-      npc.id,
+      currentNpc.id,
       () => setIsSpeaking(true),
       () => setIsSpeaking(false)
     );
@@ -110,60 +143,85 @@ export default function DialogueBox({
     }
   };
 
-  const handleGiveGift = () => {
+  const handleGiveGift = async () => {
     if (selectedGiftIdx === null) return;
     const giftSlot = inventory[selectedGiftIdx];
     if (!giftSlot) return;
 
-    const giftMeta = itemCatalog[giftSlot.item_id];
-    const isFavorite = (npc.favorite_gifts || []).includes(giftSlot.item_id);
-    const addedPoints = isFavorite ? 250 : 80;
+    sounds.playClick();
+    try {
+      const res = await fetch('/api/v1/game/npc/gift/1', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ npc_id: currentNpc.id, item_id: giftSlot.item_id })
+      });
+      const data = await res.json();
 
-    let newInventory = [...inventory];
-    giftSlot.count -= 1;
-    if (giftSlot.count <= 0) {
-      newInventory[selectedGiftIdx] = null;
-    }
+      if (res.ok && data.success) {
+        sounds.playLevelUp();
+        showNotification(data.message, 'success');
 
-    const updatedNpcs = (gameState.npcs || []).map((n) => {
-      if (n.id === npc.id) {
-        return {
-          ...n,
-          friendship_points: Math.min(2500, (n.friendship_points || 0) + addedPoints)
-        };
+        // Reload save state
+        const saveRes = await fetch('/api/v1/game/save/1');
+        if (saveRes.ok) {
+          const newSave = await saveRes.json();
+          setGameState(newSave);
+        }
+
+        const thankMsg = data.is_favorite
+          ? `Wah, ini adalah hadiah favorit yang selalu kudambakan! Terima kasih banyak sahabatku!`
+          : `Terima kasih atas pemberian berharga ini. Aku akan menjaganya dengan baik.`;
+        setCurrentDialogueText(thankMsg);
+        voiceAi.speak(thankMsg, currentNpc.id, () => setIsSpeaking(true), () => setIsSpeaking(false));
+      } else {
+        showNotification(data.detail || 'Gagal memberikan hadiah', 'error');
       }
-      return n;
-    });
+    } catch (err) {
+      console.error('Gift error', err);
+    } finally {
+      setSelectedGiftIdx(null);
+    }
+  };
 
-    sounds.playLevelUp();
-    showNotification(
-      isFavorite
-        ? `${npc.name} sangat menyukai ${giftMeta.name}! (+${addedPoints} Hubungan) ❤️`
-        : `${npc.name} menerima ${giftMeta.name}. (+${addedPoints} Hubungan)`,
-      'success'
-    );
+  const handleTurnInQuestDirect = async (quest) => {
+    if (turningInId) return;
+    setTurningInId(quest.id);
+    sounds.playClick();
 
-    // Speak grateful response
-    const thankMsg = isFavorite
-      ? `Wah, ${giftMeta.name}! Ini adalah hadiah favorit yang selalu kuimpikan, terima kasih banyak!`
-      : `Terima kasih atas ${giftMeta.name} ini, aku akan merawatnya dengan baik.`;
-    setCurrentDialogueText(thankMsg);
-    voiceAi.speak(
-      thankMsg,
-      npc.id,
-      () => setIsSpeaking(true),
-      () => setIsSpeaking(false)
-    );
+    try {
+      const res = await fetch('/api/v1/game/npc-quests/turn-in/1', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quest_id: quest.id })
+      });
+      const data = await res.json();
 
-    setSelectedGiftIdx(null);
-    setGameState({
-      ...gameState,
-      player: {
-        ...gameState.player,
-        inventory: newInventory
-      },
-      npcs: updatedNpcs
-    });
+      if (res.ok && data.success) {
+        sounds.playLevelUp();
+        showNotification(
+          data.message || `Quest '${quest.title}' Selesai! (+${quest.reward_gold}G)`,
+          'success'
+        );
+
+        const thankDialogue = `Luar biasa! Terima kasih telah membawakan permintaanku ini. Kepercayaan dan persahabatan kita semakin erat!`;
+        setCurrentDialogueText(thankDialogue);
+        voiceAi.speak(thankDialogue, currentNpc.id, () => setIsSpeaking(true), () => setIsSpeaking(false));
+
+        // Refresh save state and quest list
+        const saveRes = await fetch('/api/v1/game/save/1');
+        if (saveRes.ok) {
+          const newSave = await saveRes.json();
+          setGameState(newSave);
+        }
+        await fetchNpcQuests();
+      } else {
+        showNotification(data.detail || 'Gagal menyelesaikan quest', 'error');
+      }
+    } catch (err) {
+      console.error('Quest turn in error', err);
+    } finally {
+      setTurningInId(null);
+    }
   };
 
   const topics = [
@@ -174,25 +232,24 @@ export default function DialogueBox({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/65 backdrop-blur-sm p-4 select-none pb-8 animate-fadeIn">
-      <div className="bg-stone-900 border-4 border-amber-900/90 rounded-2xl w-full max-w-3xl shadow-2xl p-6 relative flex flex-col md:flex-row gap-5">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/65 backdrop-blur-sm p-3 sm:p-4 select-none pb-6 sm:pb-8 animate-fadeIn">
+      <div className="bg-stone-900 border-4 border-amber-900/90 rounded-2xl w-full max-w-3xl shadow-2xl p-5 sm:p-6 relative flex flex-col md:flex-row gap-5 max-h-[90vh] overflow-y-auto">
+        {/* CLOSE BUTTON */}
         <button
           onClick={() => {
             voiceAi.stop();
             sounds.playClick();
             onClose();
           }}
-          className="absolute top-3 right-3 text-stone-400 hover:text-white bg-stone-800 rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold border border-stone-600"
+          className="absolute top-3 right-3 text-stone-400 hover:text-white bg-stone-800 rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold border border-stone-600 z-10 transition"
         >
           ✕
         </button>
 
-        {/* LEFT: NPC Profile & Animated Voice Visualizer */}
+        {/* LEFT: NPC Profile, 10 Hearts & Voice Visualizer */}
         <div className="flex md:flex-col items-center md:justify-center p-3.5 bg-stone-950/80 border border-stone-800 rounded-xl min-w-[170px] shadow-inner">
           <div className="relative mb-2">
-            <NpcPortrait npcId={npc.id} isSpeaking={isSpeaking} className="w-28 h-28" />
-
-            {/* Speaking Pulse Badge */}
+            <NpcPortrait npcId={currentNpc.id} isSpeaking={isSpeaking} className="w-24 h-24 sm:w-28 sm:h-28" />
             {isSpeaking && (
               <span className="absolute -bottom-1 -right-1 bg-cyan-500 text-stone-950 text-[10px] font-bold px-1.5 py-0.5 rounded-full animate-bounce shadow">
                 Berbicara 🎙️
@@ -202,16 +259,28 @@ export default function DialogueBox({
 
           <div className="text-center w-full">
             <h3 className="font-bold text-amber-200 text-base font-medieval">
-              {npc.name}
+              {currentNpc.name}
             </h3>
-            <span className="text-[11px] text-stone-400 block mb-1">
-              {npc.title}
+            <span className="text-[11px] text-stone-400 block">
+              {currentNpc.title}
             </span>
 
-            {/* Heart Meter */}
-            <div className="flex justify-center space-x-0.5 text-xs text-rose-500 my-1">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <span key={i}>{i < hearts ? '❤️' : '🤍'}</span>
+            {/* Affection Level Title */}
+            <span className="text-[10px] text-rose-400 font-bold block my-1">
+              {getAffectionTitle(affectionLevel)} (Lv.{affectionLevel}/10)
+            </span>
+
+            {/* 10-Heart Gauge */}
+            <div className="grid grid-cols-5 gap-0.5 text-[11px] text-rose-500 my-1 justify-center max-w-[90px] mx-auto">
+              {Array.from({ length: 10 }).map((_, i) => (
+                <span
+                  key={i}
+                  className={`transition-transform ${
+                    i < affectionLevel ? 'scale-110 drop-shadow-[0_0_3px_rgba(244,63,94,0.7)]' : 'opacity-25'
+                  }`}
+                >
+                  {i < affectionLevel ? '❤️' : '🤍'}
+                </span>
               ))}
             </div>
 
@@ -225,52 +294,65 @@ export default function DialogueBox({
           </div>
         </div>
 
-        {/* RIGHT: Dialogue Text, Voice Waveform & Interactive Topics */}
+        {/* RIGHT: TABS, DIALOGUE, TOPICS & QUESTS */}
         <div className="flex-1 flex flex-col justify-between">
           <div>
-            {/* Top Bar: Replay & Voice Mute Toggles */}
-            <div className="flex justify-between items-center mb-2 text-xs">
-              <div className="flex items-center space-x-2">
-                <span className="text-[11px] font-bold text-amber-300 flex items-center space-x-1.5">
-                  <span>Percakapan Suara Suasana</span>
-                  {isSpeaking && (
-                    <span className="flex space-x-0.5 items-end h-3 ml-1">
-                      <span className="w-1 bg-cyan-400 h-2 animate-pulse" />
-                      <span className="w-1 bg-cyan-400 h-3 animate-pulse delay-75" />
-                      <span className="w-1 bg-cyan-400 h-1.5 animate-pulse delay-150" />
-                    </span>
-                  )}
-                </span>
+            {/* TAB SELECTOR: TALK vs QUESTS */}
+            <div className="flex justify-between items-center mb-2.5">
+              <div className="flex space-x-1.5 bg-stone-950/80 p-1 rounded-xl border border-stone-800 text-xs">
+                <button
+                  onClick={() => { sounds.playClick(); setDialogueTab('talk'); }}
+                  className={`px-3 py-1 rounded-lg font-bold transition flex items-center space-x-1 ${
+                    dialogueTab === 'talk'
+                      ? 'bg-amber-600 text-white shadow'
+                      : 'text-stone-400 hover:text-white'
+                  }`}
+                >
+                  <span>💬 Percakapan</span>
+                </button>
+                <button
+                  onClick={() => {
+                    sounds.playClick();
+                    setDialogueTab('quests');
+                    fetchNpcQuests();
+                  }}
+                  className={`px-3 py-1 rounded-lg font-bold transition flex items-center space-x-1 ${
+                    dialogueTab === 'quests'
+                      ? 'bg-rose-700 text-white shadow'
+                      : 'text-stone-400 hover:text-white'
+                  }`}
+                >
+                  <span>📜 Tugas ({npcQuests.filter(q => !q.is_completed).length})</span>
+                </button>
               </div>
 
-              <div className="flex items-center space-x-2">
+              {/* Voice Replay Controls */}
+              <div className="flex items-center space-x-1.5">
                 <button
                   onClick={handleReplayVoice}
                   title="Putar Ulang Suara AI"
-                  className="bg-stone-800 hover:bg-stone-700 text-cyan-300 border border-stone-700 px-2 py-0.5 rounded text-[11px] font-semibold transition flex items-center space-x-1"
+                  className="bg-stone-800 hover:bg-stone-700 text-cyan-300 border border-stone-700 px-2 py-1 rounded text-[11px] font-semibold transition flex items-center space-x-1"
                 >
-                  <span>🔁 Ulangi Suara</span>
+                  <span>🔁 Ulangi</span>
                 </button>
-
                 <button
                   onClick={handleToggleVoiceMute}
-                  title={isVoiceMuted ? 'Nyalakan Suara AI' : 'Matikan Suara AI'}
-                  className="bg-stone-800 hover:bg-stone-700 text-stone-300 border border-stone-700 px-2 py-0.5 rounded text-[11px] font-semibold transition"
+                  className="bg-stone-800 hover:bg-stone-700 text-stone-300 border border-stone-700 px-2 py-1 rounded text-[11px] font-semibold transition"
                 >
-                  {isVoiceMuted ? '🔇 Suara Bisu' : '🔊 Suara Aktif'}
+                  {isVoiceMuted ? '🔇' : '🔊'}
                 </button>
               </div>
             </div>
 
-            {/* Main Spoken Dialogue Box */}
-            <div className="bg-stone-950/80 border-2 border-amber-900/60 rounded-xl p-4 text-stone-100 text-sm leading-relaxed min-h-[90px] shadow-inner flex flex-col justify-between relative overflow-hidden">
-              <div className="font-serif italic text-amber-100/95 text-[13.5px]">
+            {/* MAIN SPOKEN DIALOGUE BOX */}
+            <div className="bg-stone-950/80 border-2 border-amber-900/60 rounded-xl p-3.5 text-stone-100 text-xs sm:text-sm leading-relaxed min-h-[75px] shadow-inner flex flex-col justify-between relative overflow-hidden">
+              <div className="font-serif italic text-amber-100/95">
                 "{currentDialogueText}"
               </div>
 
-              {/* Animated Waveform bar at bottom of dialogue */}
+              {/* Animated Waveform bar */}
               {isSpeaking && (
-                <div className="mt-3 flex items-center space-x-1 h-2 opacity-80">
+                <div className="mt-2.5 flex items-center space-x-1 h-2 opacity-80">
                   {Array.from({ length: 24 }).map((_, i) => (
                     <div
                       key={i}
@@ -285,76 +367,145 @@ export default function DialogueBox({
               )}
             </div>
 
-            {/* Interactive Discussion Topics Buttons */}
-            <div className="my-3">
-              <span className="text-[11px] font-bold text-stone-400 block mb-1.5">
-                💬 Pilih Topik untuk Bertanya (Suara AI Menjawab):
-              </span>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                {topics.map((t) => (
-                  <button
-                    key={t.key}
-                    disabled={loadingTopic}
-                    onClick={() => handleSelectTopic(t.key)}
-                    className={`text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold transition border flex items-center justify-between ${
-                      activeTopic === t.key
-                        ? 'bg-amber-900/60 border-amber-500 text-amber-200 shadow'
-                        : 'bg-stone-800/80 hover:bg-stone-700 border-stone-700 text-stone-300'
-                    }`}
-                  >
-                    <span>{t.label}</span>
-                    <span className="text-[10px] text-cyan-400">🎙️</span>
-                  </button>
-                ))}
-              </div>
-            </div>
+            {/* TAB CONTENT 1: TALK & TOPICS */}
+            {dialogueTab === 'talk' ? (
+              <>
+                <div className="my-2.5">
+                  <span className="text-[11px] font-bold text-stone-400 block mb-1">
+                    💬 Pilih Topik untuk Bertanya:
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                    {topics.map((t) => (
+                      <button
+                        key={t.key}
+                        disabled={loadingTopic}
+                        onClick={() => handleSelectTopic(t.key)}
+                        className={`text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold transition border flex items-center justify-between ${
+                          activeTopic === t.key
+                            ? 'bg-amber-900/60 border-amber-500 text-amber-200 shadow'
+                            : 'bg-stone-800/80 hover:bg-stone-700 border-stone-700 text-stone-300'
+                        }`}
+                      >
+                        <span>{t.label}</span>
+                        <span className="text-[10px] text-cyan-400">🎙️</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-            {/* Gift giving section */}
-            <div className="border-t border-stone-800 pt-2.5">
-              <label className="text-[11px] text-stone-400 block mb-1 font-semibold">
-                🎁 Berikan Hadiah dari Ransel:
-              </label>
-              <div className="flex items-center space-x-2">
-                <select
-                  value={selectedGiftIdx ?? ''}
-                  onChange={(e) => setSelectedGiftIdx(e.target.value === '' ? null : Number(e.target.value))}
-                  className="bg-stone-800 border border-stone-700 text-stone-200 text-xs rounded-lg px-2.5 py-1.5 flex-1 focus:outline-none focus:border-amber-500"
-                >
-                  <option value="">-- Pilih Barang dari Tas --</option>
-                  {inventory.map((slot, idx) => {
-                    if (!slot) return null;
-                    const meta = itemCatalog[slot.item_id];
+                {/* Gift giving section */}
+                <div className="border-t border-stone-800 pt-2">
+                  <label className="text-[11px] text-stone-400 block mb-1 font-semibold">
+                    🎁 Berikan Hadiah Favorit (Naikkan Tingkat Kasih hingga Lv. 10):
+                  </label>
+                  <div className="flex items-center space-x-2">
+                    <select
+                      value={selectedGiftIdx ?? ''}
+                      onChange={(e) => setSelectedGiftIdx(e.target.value === '' ? null : Number(e.target.value))}
+                      className="bg-stone-800 border border-stone-700 text-stone-200 text-xs rounded-lg px-2.5 py-1.5 flex-1 focus:outline-none focus:border-amber-500"
+                    >
+                      <option value="">-- Pilih Barang dari Tas --</option>
+                      {inventory.map((slot, idx) => {
+                        if (!slot) return null;
+                        const meta = itemCatalog[slot.item_id];
+                        return (
+                          <option key={idx} value={idx}>
+                            {meta?.name || slot.item_id} ({slot.count}x)
+                          </option>
+                        );
+                      })}
+                    </select>
+
+                    <button
+                      disabled={selectedGiftIdx === null}
+                      onClick={handleGiveGift}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                        selectedGiftIdx !== null
+                          ? 'bg-rose-700 hover:bg-rose-600 text-white shadow'
+                          : 'bg-stone-800 text-stone-500 cursor-not-allowed border border-stone-700'
+                      }`}
+                    >
+                      Beri Hadiah
+                    </button>
+                  </div>
+                </div>
+              </>
+            ) : (
+              /* TAB CONTENT 2: QUESTS FOR THIS NPC */
+              <div className="my-2.5 space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                <span className="text-[11px] font-bold text-amber-300 block">
+                  📜 Tugas & Permintaan dari {currentNpc.name}:
+                </span>
+
+                {npcQuests.length === 0 ? (
+                  <p className="text-xs text-stone-400 italic py-4 text-center">
+                    Belum ada tugas baru saat ini.
+                  </p>
+                ) : (
+                  npcQuests.map((q) => {
+                    const isReady = q.can_turn_in;
                     return (
-                      <option key={idx} value={idx}>
-                        {meta?.name || slot.item_id} ({slot.count}x)
-                      </option>
-                    );
-                  })}
-                </select>
+                      <div
+                        key={q.id}
+                        className={`p-2.5 rounded-xl border flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 text-xs ${
+                          q.is_completed
+                            ? 'bg-stone-950/40 border-stone-800 opacity-60'
+                            : isReady
+                            ? 'bg-stone-950 border-emerald-600 shadow'
+                            : 'bg-stone-950/80 border-stone-800'
+                        }`}
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-1.5 font-bold text-amber-200">
+                            <span>{q.title}</span>
+                            {q.is_completed && (
+                              <span className="text-[9px] bg-emerald-950 text-emerald-400 px-1.5 rounded">
+                                Selesai
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-stone-400 mt-0.5">{q.description}</p>
+                          {!q.is_completed && (
+                            <span
+                              className={`text-[10px] font-mono font-bold mt-1 inline-block ${
+                                isReady ? 'text-emerald-400' : 'text-amber-400'
+                              }`}
+                            >
+                              Status: {q.current_progress} / {q.target} {q.target_item_name || ''}
+                            </span>
+                          )}
+                        </div>
 
-                <button
-                  disabled={selectedGiftIdx === null}
-                  onClick={handleGiveGift}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                    selectedGiftIdx !== null
-                      ? 'bg-rose-700 hover:bg-rose-600 text-white shadow'
-                      : 'bg-stone-800 text-stone-500 cursor-not-allowed border border-stone-700'
-                  }`}
-                >
-                  Beri Hadiah
-                </button>
+                        {!q.is_completed && (
+                          <button
+                            disabled={!isReady || turningInId === q.id}
+                            onClick={() => handleTurnInQuestDirect(q)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex-shrink-0 ${
+                              isReady
+                                ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-stone-950 font-black shadow cursor-pointer'
+                                : 'bg-stone-800 text-stone-500 cursor-not-allowed border border-stone-700'
+                            }`}
+                          >
+                            {turningInId === q.id ? 'Menyerahkan...' : isReady ? '✨ Serahkan!' : 'Belum Cukup'}
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
               </div>
-            </div>
+            )}
           </div>
 
-          <div className="flex justify-end mt-3">
+          {/* BOTTOM BUTTON */}
+          <div className="flex justify-end mt-2 pt-2 border-t border-stone-800">
             <button
               onClick={() => {
                 voiceAi.stop();
                 sounds.playClick();
                 onClose();
               }}
-              className="px-4 py-1.5 bg-amber-700 hover:bg-amber-600 text-amber-100 rounded-lg text-xs font-bold shadow"
+              className="px-4 py-1.5 bg-amber-700 hover:bg-amber-600 text-amber-100 rounded-lg text-xs font-bold shadow transition"
             >
               Selesai Bicara
             </button>

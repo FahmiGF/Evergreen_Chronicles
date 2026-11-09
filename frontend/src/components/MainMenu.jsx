@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { sounds } from '../game/SoundFx';
 import { translations } from '../i18n/translations';
+import StorylineModal from './StorylineModal';
 
 export default function MainMenu({
   onStartSingleplayer,
@@ -16,6 +17,7 @@ export default function MainMenu({
   const [multiplayerModalOpen, setMultiplayerModalOpen] = useState(false);
   const [creditsModalOpen, setCreditsModalOpen] = useState(false);
   const [playtestersModalOpen, setPlaytestersModalOpen] = useState(false);
+  const [storylineModalOpen, setStorylineModalOpen] = useState(false);
 
   // Multiplayer setup state
   const [playerName, setPlayerName] = useState('Fahmi');
@@ -209,7 +211,19 @@ export default function MainMenu({
             <span>{t.menu.startMultiplayer}</span>
           </button>
 
-          {/* 3. Controls Guide */}
+          {/* 3. Storyline & Cutscenes */}
+          <button
+            onClick={() => {
+              sounds.playClick();
+              setStorylineModalOpen(true);
+            }}
+            className="w-full py-2.5 px-6 bg-gradient-to-r from-amber-700 to-amber-600 hover:from-amber-600 hover:to-amber-500 text-amber-100 font-bold rounded-xl text-xs shadow-lg hover:shadow-amber-600/30 transition-all transform hover:-translate-y-0.5 border border-amber-400/60 flex items-center justify-center space-x-2"
+          >
+            <span>🎬</span>
+            <span>{t.menu.storyline || 'Alur Cerita & Sinematik'}</span>
+          </button>
+
+          {/* 4. Controls Guide */}
           <button
             onClick={() => {
               sounds.playClick();
@@ -392,6 +406,12 @@ export default function MainMenu({
           </div>
         </div>
       )}
+
+      {/* MODAL: STORYLINE & CUTSCENES */}
+      <StorylineModal
+        isOpen={storylineModalOpen}
+        onClose={() => setStorylineModalOpen(false)}
+      />
     </div>
   );
 }

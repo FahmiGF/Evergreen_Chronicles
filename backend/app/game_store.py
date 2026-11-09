@@ -36,10 +36,12 @@ class NPCProfile(BaseModel):
     name: str
     title: str
     location: str
-    friendship_points: int  # 0 to 2500 (250 pts per heart, max 10 hearts)
-    talked_today: bool
-    favorite_gifts: List[str]
-    dialogues: Dict[str, str]  # season/era specific dialogue
+    affection_level: int = 0  # 0 to 10 max
+    friendship_points: int = 0  # 0 to 1000 (100 points per level)
+    talked_today: bool = False
+    favorite_gifts: List[str] = []
+    dialogues: Optional[Dict[str, str]] = {}
+    unlocked_perks: Optional[List[str]] = []
 
 class TechNode(BaseModel):
     id: str
@@ -63,6 +65,9 @@ class GameSave(BaseModel):
     tech_tree: List[Dict[str, Any]]
     active_quests: List[Dict[str, Any]]
     completed_quests: List[str]
+    active_npc_quests: Optional[List[Dict[str, Any]]] = []
+    completed_npc_quests: Optional[List[str]] = []
+    storyline_unlocked: Optional[List[str]] = ["chap_prologue"]
     shipping_bin: List[Dict[str, Any]]
 
 # Comprehensive Item Catalog
@@ -79,6 +84,7 @@ ITEMS_DATABASE: Dict[str, Item] = {
     "seed_parsnip": Item(id="seed_parsnip", name="Benih Parsnip", category="seed", description="Tumbuh dalam 4 hari di musim semi.", buy_price=20, sell_price=10, stackable=True, icon_type="seed_bag", crop_growth_days=4, harvest_item_id="crop_parsnip"),
     "seed_potato": Item(id="seed_potato", name="Bibit Kentang", category="seed", description="Tumbuh dalam 5 hari, potensi panen ganda.", buy_price=35, sell_price=15, stackable=True, icon_type="seed_bag", crop_growth_days=5, harvest_item_id="crop_potato"),
     "seed_strawberry": Item(id="seed_strawberry", name="Benih Stroberi", category="seed", description="Tumbuh dalam 6 hari dan berbuah berulang.", buy_price=60, sell_price=30, stackable=True, icon_type="seed_bag", crop_growth_days=6, harvest_item_id="crop_strawberry"),
+    "seed_beetroot": Item(id="seed_beetroot", name="Benih Bit Merah", category="seed", description="Umbi merah kaya zat besi. Tumbuh dalam 4 hari, disukai Tabib Elara dan Rowan.", buy_price=35, sell_price=18, stackable=True, icon_type="seed_bag", crop_growth_days=4, harvest_item_id="crop_beetroot"),
     "seed_corn": Item(id="seed_corn", name="Benih Jagung Emas", category="seed", description="Tumbuh di musim panas dan gugur dalam 6 hari.", buy_price=45, sell_price=20, stackable=True, icon_type="seed_bag", crop_growth_days=6, harvest_item_id="crop_corn"),
     "seed_tomato": Item(id="seed_tomato", name="Benih Tomat Segar", category="seed", description="Tumbuh dalam 5 hari dan berbuah cepat.", buy_price=30, sell_price=15, stackable=True, icon_type="seed_bag", crop_growth_days=5, harvest_item_id="crop_tomato"),
     "seed_moonberry": Item(id="seed_moonberry", name="Benih Moonberry Ajaib", category="seed", description="Tanaman langka yang bersinar di malam hari.", buy_price=150, sell_price=75, stackable=True, icon_type="seed_magical", crop_growth_days=7, harvest_item_id="crop_moonberry"),
@@ -87,6 +93,7 @@ ITEMS_DATABASE: Dict[str, Item] = {
     "crop_parsnip": Item(id="crop_parsnip", name="Parsnip Segar", category="crop", description="Akar umbi manis musim semi.", buy_price=60, sell_price=45, stackable=True, icon_type="parsnip", energy_restore=25),
     "crop_potato": Item(id="crop_potato", name="Kentang Aetherwyn", category="crop", description="Bergizi tinggi dan lezat dipanggang.", buy_price=90, sell_price=70, stackable=True, icon_type="potato", energy_restore=35),
     "crop_strawberry": Item(id="crop_strawberry", name="Stroberi Manis", category="crop", description="Buah merah ranum favorit penduduk Greenvale.", buy_price=160, sell_price=120, stackable=True, icon_type="strawberry", energy_restore=45),
+    "crop_beetroot": Item(id="crop_beetroot", name="Bit Merah Segar", category="crop", description="Umbi merah manis bergizi tinggi untuk tonik kesehatan dan bahan tempa pandai besi.", buy_price=85, sell_price=60, stackable=True, icon_type="beetroot", energy_restore=35),
     "crop_corn": Item(id="crop_corn", name="Jagung Emas", category="crop", description="Tongkol jagung kuning manis kaya karbohidrat.", buy_price=120, sell_price=90, stackable=True, icon_type="corn", energy_restore=40),
     "crop_tomato": Item(id="crop_tomato", name="Tomat Merah Segar", category="crop", description="Bahan dasar masakan sup dan saus hangat.", buy_price=80, sell_price=60, stackable=True, icon_type="tomato", energy_restore=30),
     "crop_moonberry": Item(id="crop_moonberry", name="Moonberry Kristal", category="crop", description="Buah magis bercahaya ungu yang berharga tinggi.", buy_price=400, sell_price=320, stackable=True, icon_type="moonberry", energy_restore=80),
@@ -104,6 +111,7 @@ ITEMS_DATABASE: Dict[str, Item] = {
     "tech_sprinkler_modern": Item(id="tech_sprinkler_modern", name="Smart Aether Sprinkler Mk.II", category="technology", description="Menyiram 8 petak di sekitarnya dengan energi kristal.", buy_price=750, sell_price=350, stackable=True, icon_type="sprinkler_adv"),
     "tech_aether_generator": Item(id="tech_aether_generator", name="Generator Daya Aether", category="technology", description="Pembangkit daya listrik mikro untuk lampu dan otomasi.", buy_price=1500, sell_price=700, stackable=False, icon_type="generator"),
     "tech_street_lamp": Item(id="tech_street_lamp", name="Lampu Jalan LED Modern", category="technology", description="Menerangi malam hari secara otomatis.", buy_price=180, sell_price=80, stackable=True, icon_type="lamp"),
+    "item_fellowship_medal": Item(id="item_fellowship_medal", name="Medali Harmoni Aetherwyn", category="material", description="Simbol persaudaraan dan cinta sejati dengan seluruh warga desa.", buy_price=0, sell_price=1200, stackable=False, icon_type="medal"),
 }
 
 class EvergreenGameEngine:
@@ -146,8 +154,8 @@ class EvergreenGameEngine:
                     tile_type = "tilled"
                     crop = {"crop_id": "crop_potato", "stage": 1, "max_stage": 4, "days_grown": 1, "watered_today": False}
                 elif (x, y) == (8, 8):
-                    tile_type = "tilled"
-                    crop = None
+                    tile_type = "watered"
+                    crop = {"crop_id": "crop_beetroot", "stage": 4, "max_stage": 4, "days_grown": 4, "watered_today": True}
 
                 row.append({
                     "x": x,
@@ -181,12 +189,14 @@ class EvergreenGameEngine:
                 {"item_id": "tool_axe", "count": 1},
                 {"item_id": "tool_sword", "count": 1},
                 {"item_id": "seed_parsnip", "count": 8},
+                {"item_id": "seed_beetroot", "count": 8},
                 {"item_id": "seed_strawberry", "count": 4},
                 {"item_id": "crop_parsnip", "count": 2},
+                {"item_id": "crop_beetroot", "count": 4},
                 {"item_id": "mat_wood", "count": 24},
                 {"item_id": "mat_stone", "count": 16},
                 {"item_id": "tech_sprinkler_basic", "count": 1},
-                None, None, None, None, None, None, None, None, None, None, None, None, None
+                None, None, None, None, None, None, None, None, None, None, None
             ],
             "equipped_index": 0
         }
@@ -210,29 +220,38 @@ class EvergreenGameEngine:
                 "name": "Elara",
                 "title": "Ahli Herbal & Tabib Desa",
                 "location": "Apotek Herbal Greenvale",
-                "friendship_points": 750,  # 3 hearts
+                "affection_level": 3,
+                "friendship_points": 350,  # 350/1000 pts (Lv 3)
+                "max_affection_level": 10,
                 "talked_today": False,
-                "favorite_gifts": ["crop_strawberry", "crop_moonberry"],
-                "dialogue": "Selamat pagi, pengelana! Udara musim semi hari ini membawa aroma segar pucuk tanaman."
+                "favorite_gifts": ["crop_strawberry", "crop_moonberry", "crop_beetroot"],
+                "unlocked_perks": ["Herbal Healing +10%", "Daily Forest Vitality Tea"],
+                "dialogue": "Selamat pagi, pengelana! Udara musim semi hari ini membawa aroma segar pucuk tanaman herbal dan bit merah."
             },
             {
                 "id": "npc_rowan",
                 "name": "Rowan",
                 "title": "Pandai Besi Kerajaan",
                 "location": "Bengkel Tempa Rowan",
-                "friendship_points": 500,  # 2 hearts
+                "affection_level": 2,
+                "friendship_points": 240,  # 240/1000 pts (Lv 2)
+                "max_affection_level": 10,
                 "talked_today": False,
-                "favorite_gifts": ["mat_iron_ore", "mat_copper_ore"],
-                "dialogue": "Bawakan aku lebih banyak bijih besi dari tambang kuno, dan aku bisa menempa cangkul yang lebih awet untukmu."
+                "favorite_gifts": ["mat_iron_ore", "mat_copper_ore", "crop_beetroot"],
+                "unlocked_perks": ["Mining Damage +5%", "Anvil Repair Discount"],
+                "dialogue": "Bawakan aku lebih banyak bijih besi dan bit merah bergizi tinggi untuk stamina perapian tempa."
             },
             {
                 "id": "npc_nessa",
                 "name": "Nessa",
                 "title": "Insinyur Mesin & Penemu",
                 "location": "Laboratorium Riset Aether",
-                "friendship_points": 620,  # 2.5 hearts
+                "affection_level": 2,
+                "friendship_points": 260,  # 260/1000 pts (Lv 2)
+                "max_affection_level": 10,
                 "talked_today": False,
-                "favorite_gifts": ["mat_aether_crystal", "mat_gold_ore"],
+                "favorite_gifts": ["mat_aether_crystal", "mat_gold_ore", "tech_sprinkler_basic"],
+                "unlocked_perks": ["Sprinkler Range +1", "Aether Energy Output +10%"],
                 "dialogue": "Kristal Aether ini bukan sekadar batu permata biasa. Getarannya sanggup menyalakan lampu tanpa setetes pun minyak!"
             },
             {
@@ -240,10 +259,13 @@ class EvergreenGameEngine:
                 "name": "Mira",
                 "title": "Pedagang Umum & Pasar",
                 "location": "Toserba Greenvale",
-                "friendship_points": 900,  # 3.5 hearts
+                "affection_level": 3,
+                "friendship_points": 380,  # 380/1000 pts (Lv 3)
+                "max_affection_level": 10,
                 "talked_today": False,
-                "favorite_gifts": ["crop_parsnip", "crop_potato"],
-                "dialogue": "Sayuran berkualitas tinggi selalu kubeli dengan harga bersaing. Jangan ragu mengisi kotak pengirimanmu!"
+                "favorite_gifts": ["crop_parsnip", "crop_potato", "crop_beetroot"],
+                "unlocked_perks": ["Selling Price +5%", "Toserba Shop Discount 10%"],
+                "dialogue": "Sayuran berkualitas tinggi seperti bit merah dan stroberi selalu kubeli dengan harga bersaing. Jangan ragu mengisi kotak pengirimanmu!"
             }
         ]
 
@@ -270,6 +292,13 @@ class EvergreenGameEngine:
                 {"id": "qst_02", "title": "Menembus Gua Tambang", "description": "Kalahkan 3 slime di lantai 1 Forgotten Mines.", "reward_gold": 200, "reward_aether": 10, "progress": 0, "target": 3, "completed": False}
             ],
             completed_quests=[],
+            active_npc_quests=[
+                {"id": "quest_elara_beetroots", "npc_id": "npc_elara", "accepted": True, "progress": 4, "target": 5, "completed": False},
+                {"id": "quest_rowan_beetroots", "npc_id": "npc_rowan", "accepted": True, "progress": 4, "target": 5, "completed": False},
+                {"id": "quest_mira_friendship", "npc_id": "npc_mira", "accepted": True, "progress": 3, "target": 5, "completed": False}
+            ],
+            completed_npc_quests=[],
+            storyline_unlocked=["chap_prologue", "chap_01"],
             shipping_bin=[]
         )
         self.save_slots[1] = default_save
@@ -289,6 +318,9 @@ class EvergreenGameEngine:
             tech_tree=payload["tech_tree"],
             active_quests=payload.get("active_quests", []),
             completed_quests=payload.get("completed_quests", []),
+            active_npc_quests=payload.get("active_npc_quests", []),
+            completed_npc_quests=payload.get("completed_npc_quests", []),
+            storyline_unlocked=payload.get("storyline_unlocked", ["chap_prologue"]),
             shipping_bin=payload.get("shipping_bin", [])
         )
         self.save_slots[slot_id] = save_obj
@@ -602,6 +634,437 @@ TUTORIAL_QUESTS = [
         "reward_gold": 250,
         "reward_items": [],
         "completed": False
+    }
+]
+
+# ==================== NPC QUESTS CATALOG (18 EXTENSIVE QUESTS) ====================
+NPC_QUESTS_CATALOG = [
+    # ELARA'S HERBALIST & NATURE QUESTS
+    {
+        "id": "quest_elara_intro",
+        "npc_id": "npc_elara",
+        "npc_name": "Elara",
+        "title": "Ramuan Herba Pembuka",
+        "description": "Bawakan 3 Parsnip Segar ke Elara untuk meracik salep pemulih stamina petani pemula.",
+        "type": "deliver_item",
+        "target_item": "crop_parsnip",
+        "target_count": 3,
+        "reward_gold": 120,
+        "reward_aether": 5,
+        "reward_affection": 100,  # +1 Affection Level
+        "required_affection_level": 0
+    },
+    {
+        "id": "quest_elara_beetroots",
+        "npc_id": "npc_elara",
+        "npc_name": "Elara",
+        "title": "Tonik Segar Bit Merah (5 Bit Merah)",
+        "description": "Elara membutuhkan 5 Bit Merah segar untuk membuat tonik vitalitas penawar racun dan keletihan.",
+        "type": "deliver_item",
+        "target_item": "crop_beetroot",
+        "target_count": 5,
+        "reward_gold": 300,
+        "reward_aether": 15,
+        "reward_affection": 150,  # +1.5 Affection Levels
+        "required_affection_level": 1
+    },
+    {
+        "id": "quest_elara_moonberry",
+        "npc_id": "npc_elara",
+        "npc_name": "Elara",
+        "title": "Flora Cahaya Rembulan",
+        "description": "Bawakan 1 Moonberry Kristal langka yang bersinar di malam hari untuk ramuan eliksir suci.",
+        "type": "deliver_item",
+        "target_item": "crop_moonberry",
+        "target_count": 1,
+        "reward_gold": 450,
+        "reward_aether": 25,
+        "reward_affection": 200,  # +2.0 Affection Levels
+        "required_affection_level": 3
+    },
+    {
+        "id": "quest_elara_sanctuary",
+        "npc_id": "npc_elara",
+        "npc_name": "Elara",
+        "title": "Pelindung Suaka Hutan Berbisik",
+        "description": "Bawakan 12 Kayu Gelondongan untuk merestorasi pagar suaka tanaman obat purba di Whispering Woods.",
+        "type": "deliver_item",
+        "target_item": "mat_wood",
+        "target_count": 12,
+        "reward_gold": 350,
+        "reward_aether": 20,
+        "reward_affection": 200,
+        "required_affection_level": 4
+    },
+
+    # ROWAN'S BLACKSMITH & ROYAL FORGE QUESTS
+    {
+        "id": "quest_rowan_intro",
+        "npc_id": "npc_rowan",
+        "npc_name": "Rowan",
+        "title": "Bahan Peleburan Tembaga Pertama",
+        "description": "Serahkan 4 Bijih Tembaga dari Forgotten Mines ke bengkel Rowan untuk menyalakan tanur.",
+        "type": "deliver_item",
+        "target_item": "mat_copper_ore",
+        "target_count": 4,
+        "reward_gold": 150,
+        "reward_aether": 5,
+        "reward_affection": 100,
+        "required_affection_level": 0
+    },
+    {
+        "id": "quest_rowan_beetroots",
+        "npc_id": "npc_rowan",
+        "npc_name": "Rowan",
+        "title": "Stamina Pandai Besi (5 Bit Merah)",
+        "description": "Rowan dan para magang butuh tenaga! Bawakan 5 Bit Merah segar untuk memulihkan stamina saat menempa di depan api tungku.",
+        "type": "deliver_item",
+        "target_item": "crop_beetroot",
+        "target_count": 5,
+        "reward_gold": 320,
+        "reward_aether": 15,
+        "reward_affection": 150,
+        "required_affection_level": 1
+    },
+    {
+        "id": "quest_rowan_iron",
+        "npc_id": "npc_rowan",
+        "npc_name": "Rowan",
+        "title": "Pesanan Baja Tempa Kerajaan",
+        "description": "Serahkan 5 Bijih Besi berkualitas tinggi untuk menempa perkakas kokoh tahan banting.",
+        "type": "deliver_item",
+        "target_item": "mat_iron_ore",
+        "target_count": 5,
+        "reward_gold": 400,
+        "reward_aether": 20,
+        "reward_affection": 200,
+        "required_affection_level": 2
+    },
+    {
+        "id": "quest_rowan_masterwork",
+        "npc_id": "npc_rowan",
+        "npc_name": "Rowan",
+        "title": "Rahasia Paduan Kristal Aether",
+        "description": "Bawakan 3 Kristal Aether Murni untuk eksperimen menempa bilah pedang kristal yang tidak akan pernah tumpul.",
+        "type": "deliver_item",
+        "target_item": "mat_aether_crystal",
+        "target_count": 3,
+        "reward_gold": 800,
+        "reward_aether": 35,
+        "reward_affection": 250,
+        "required_affection_level": 5
+    },
+
+    # NESSA'S HIGH-TECH INVENTOR QUESTS
+    {
+        "id": "quest_nessa_intro",
+        "npc_id": "npc_nessa",
+        "npc_name": "Nessa",
+        "title": "Konduksi Sederhana Penemu",
+        "description": "Serahkan 3 Bijih Tembaga dan 5 Batu Kali ke laboratorium riset Nessa untuk merakit generator sirkuit.",
+        "type": "deliver_item",
+        "target_item": "mat_copper_ore",
+        "target_count": 3,
+        "reward_gold": 160,
+        "reward_aether": 10,
+        "reward_affection": 100,
+        "required_affection_level": 0
+    },
+    {
+        "id": "quest_nessa_battery",
+        "npc_id": "npc_nessa",
+        "npc_name": "Nessa",
+        "title": "Baterai Prototip Sprinkler Cerdas",
+        "description": "Bawakan 2 Kristal Aether Murni untuk menyalakan pompa getar sprinkler generasi kedua.",
+        "type": "deliver_item",
+        "target_item": "mat_aether_crystal",
+        "target_count": 2,
+        "reward_gold": 450,
+        "reward_aether": 25,
+        "reward_affection": 180,
+        "required_affection_level": 2
+    },
+    {
+        "id": "quest_nessa_gold",
+        "npc_id": "npc_nessa",
+        "npc_name": "Nessa",
+        "title": "Konduktor Emas Berkecepatan Tinggi",
+        "description": "Bawakan 2 Bijih Emas Murni dari kedalaman tambang untuk jalur sinyal automaton otonom.",
+        "type": "deliver_item",
+        "target_item": "mat_gold_ore",
+        "target_count": 2,
+        "reward_gold": 600,
+        "reward_aether": 30,
+        "reward_affection": 220,
+        "required_affection_level": 4
+    },
+    {
+        "id": "quest_nessa_core",
+        "npc_id": "npc_nessa",
+        "npc_name": "Nessa",
+        "title": "Inti Abadi Peradaban Aether",
+        "description": "Bawakan 5 Kristal Aether Murni untuk menghidupkan stasiun daya modern seluruh desa.",
+        "type": "deliver_item",
+        "target_item": "mat_aether_crystal",
+        "target_count": 5,
+        "reward_gold": 1200,
+        "reward_aether": 60,
+        "reward_affection": 280,
+        "required_affection_level": 6
+    },
+
+    # MIRA'S MERCHANT & FELLOWSHIP QUESTS
+    {
+        "id": "quest_mira_intro",
+        "npc_id": "npc_mira",
+        "npc_name": "Mira",
+        "title": "Pasokan Sayur Pasar Greenvale",
+        "description": "Kirimkan 4 Kentang Aetherwyn ke toserba Mira untuk memenuhi pesanan kafilah pedagang.",
+        "type": "deliver_item",
+        "target_item": "crop_potato",
+        "target_count": 4,
+        "reward_gold": 220,
+        "reward_aether": 5,
+        "reward_affection": 100,
+        "required_affection_level": 0
+    },
+    {
+        "id": "quest_mira_beetroots",
+        "npc_id": "npc_mira",
+        "npc_name": "Mira",
+        "title": "Festival Kuliner Bit Merah (5 Bit Merah)",
+        "description": "Permintaan khusus saudagar ibukota! Kumpulkan 5 Bit Merah manis dan segar untuk pameran hasil bumi.",
+        "type": "deliver_item",
+        "target_item": "crop_beetroot",
+        "target_count": 5,
+        "reward_gold": 380,
+        "reward_aether": 15,
+        "reward_affection": 160,
+        "required_affection_level": 1
+    },
+    {
+        "id": "quest_mira_friendship",
+        "npc_id": "npc_mira",
+        "npc_name": "Mira",
+        "title": "Having Friends with Us! (Harmoni Penduduk)",
+        "description": "Perkuat persahabatan di desa! Selesaikan minimal 4 Quest Penduduk ATAU capai Affection Level 5 dengan salah satu warga desa!",
+        "type": "affection_milestone",
+        "target_affection_level": 5,
+        "target_quests_completed": 4,
+        "reward_gold": 800,
+        "reward_aether": 50,
+        "reward_affection": 250,  # Boosts ALL NPCs!
+        "reward_item": "item_fellowship_medal",
+        "required_affection_level": 2
+    },
+    {
+        "id": "quest_mira_caravan",
+        "npc_id": "npc_mira",
+        "npc_name": "Mira",
+        "title": "Ekspedisi Kafilah Dagang Emas",
+        "description": "Buktikan kesuksesan pertanianmu dengan menghasilkan panen melimpah dan serahkan 1 Moonberry Kristal.",
+        "type": "deliver_item",
+        "target_item": "crop_moonberry",
+        "target_count": 1,
+        "reward_gold": 1000,
+        "reward_aether": 40,
+        "reward_affection": 250,
+        "required_affection_level": 5
+    },
+
+    # GUILD & WORLD MILESTONES
+    {
+        "id": "quest_mines_slimes",
+        "npc_id": "npc_rowan",
+        "npc_name": "Rowan",
+        "title": "Pembersih Monster Slime Tambang",
+        "description": "Kalahkan minimal 5 monster slime di Forgotten Mines untuk mengamankan lorong pekerja tambang.",
+        "type": "slimes_defeated",
+        "target_count": 5,
+        "reward_gold": 300,
+        "reward_aether": 15,
+        "reward_affection": 150,
+        "required_affection_level": 0
+    },
+    {
+        "id": "quest_legend_soulmate",
+        "npc_id": "npc_elara",
+        "npc_name": "Elara",
+        "title": "Ikatan Abadi — Soulmate of Aetherwyn",
+        "description": "Capai Tingkat Hubungan Maksimal (Affection Level 10) dengan salah satu warga Greenvale.",
+        "type": "max_affection",
+        "target_affection_level": 10,
+        "reward_gold": 2500,
+        "reward_aether": 100,
+        "reward_affection": 0,
+        "reward_item": "item_fellowship_medal",
+        "required_affection_level": 6
+    }
+]
+
+# ==================== STORYLINE & TRAILER CUTSCENES ====================
+STORYLINE_CHAPTERS = [
+    {
+        "id": "chap_prologue",
+        "chapter_number": 0,
+        "title": "Trailer Sinematik: The Great Sundering & Warisan Aetherwyn",
+        "subtitle": "Dari Runtuhnya Peradaban Kuno Menuju Fajar Baru",
+        "unlock_desc": "Terbuka Sejak Awal",
+        "unlocked": True,
+        "bg_theme": "ruins_night",
+        "scenes": [
+            {
+                "speaker": "Narator Sejarah",
+                "text": "Dahulu kala, Kerajaan Aetherwyn adalah pusat peradaban paling makmur di benua ini. Kristal Aether mengalirkan daya murni ke kota-kota megah dan ladang subur tanpa batas...",
+                "visual": "ancient_glory"
+            },
+            {
+                "speaker": "Narator Sejarah",
+                "text": "Namun prahara misterius 'The Great Sundering' mengguncang dunia. Bumi terbelah, menara-menara runtuh, dan teknologi peradaban lenyap tertelan kabut waktu.",
+                "visual": "cataclysm_sundering"
+            },
+            {
+                "speaker": "Pengelana Baru",
+                "text": "Berabad-abad kemudian... Kamu mewarisi lahan pertanian terbengkalai ini. Dengan sebuah cangkul tua, tanah penuh ilalang, dan tekad baja untuk bangkit.",
+                "visual": "arrival_farm"
+            },
+            {
+                "speaker": "Suara Bisikan Aether",
+                "text": "Bangunlah kembali warisan leluhur ini. Dari akar tradisional medieval, jalin persahabatan sejati, dan bawalah Aetherwyn menuju era keemasan baru!",
+                "visual": "dawn_rising"
+            }
+        ]
+    },
+    {
+        "id": "chap_01",
+        "chapter_number": 1,
+        "title": "Babak I: Akar Pertama Kehidupan (The Sacred Soil)",
+        "subtitle": "Tunas Hijau di Tanah yang Bangkit",
+        "unlock_desc": "Capai Affection Level 1 dengan Elara atau selesaikan Tutorial Bertani",
+        "unlock_rule": {"type": "affection_or_tutorial", "npc_id": "npc_elara", "level": 1, "tut_step": 2},
+        "bg_theme": "spring_farm",
+        "scenes": [
+            {
+                "speaker": "Elara",
+                "text": "Lihatlah ladang ini... Tanah yang sekian lama tertidur kini kembali bernapas dengan tunas hijau segar dan bit merah ranum!",
+                "visual": "sprouts_garden"
+            },
+            {
+                "speaker": "Elara",
+                "text": "Pohon purba di Hutan Berbisik seakan berdengung merestui kedatanganmu. Selama kau merawat tanah ini dengan kasih, Aetherwyn tidak akan pernah layu lagi.",
+                "visual": "sacred_tree"
+            }
+        ]
+    },
+    {
+        "id": "chap_02",
+        "chapter_number": 2,
+        "title": "Babak II: Percikan Bara Abadi (Sparks of the Royal Forge)",
+        "subtitle": "Kekuatan Tempa & Semangat Pantang Padam",
+        "unlock_desc": "Selesaikan Quest 'Stamina Pandai Besi (5 Bit Merah)' atau Affection Level 3 dengan Rowan",
+        "unlock_rule": {"type": "quest_or_affection", "quest_id": "quest_rowan_beetroots", "npc_id": "npc_rowan", "level": 3},
+        "bg_theme": "forge_fire",
+        "scenes": [
+            {
+                "speaker": "Rowan",
+                "text": "Hahaha! Khasiat bit merah dan bijih besi pilihanmu memberi tenaga luar biasa pada tungku perapian bengkel tempa!",
+                "visual": "furnace_blaze"
+            },
+            {
+                "speaker": "Rowan",
+                "text": "Dengar denting palu ini, anak muda! Dengan baja hasil tempaan kita, perkakasmu tidak akan pernah patah bahkan saat menembus batu terkeras di Gua Terlupakan!",
+                "visual": "anvil_hammer"
+            }
+        ]
+    },
+    {
+        "id": "chap_03",
+        "chapter_number": 3,
+        "title": "Babak III: Having Friends with Us! (Harmoni Jiwa Penduduk)",
+        "subtitle": "Hangatnya Persahabatan di Bawah Langit Rembulan",
+        "unlock_desc": "Selesaikan Quest 'Having Friends with Us!' ATAU capai Affection Level 5 dengan seorang warga",
+        "unlock_rule": {"type": "affection_any", "level": 5, "quest_id": "quest_mira_friendship"},
+        "bg_theme": "village_festival",
+        "scenes": [
+            {
+                "speaker": "Mira",
+                "text": "Lihatlah sekeliling kita! Alun-alun desa kembali bermandikan cahaya tawa dan kehangatan berkat kebaikan hatimu!",
+                "visual": "town_square_cheer"
+            },
+            {
+                "speaker": "Elara & Nessa",
+                "text": "Dari tabib, pandai besi, hingga penemu... kita semua kini bukan lagi sekadar tetangga, melainkan keluarga sejati Aetherwyn!",
+                "visual": "four_friends_toast"
+            },
+            {
+                "speaker": "Rowan",
+                "text": "Bersulang untuk sahabat terbaik kita! Bersama kita kuat, bersama kita melangkah ke masa depan!",
+                "visual": "cheers_banquet"
+            }
+        ]
+    },
+    {
+        "id": "chap_04",
+        "chapter_number": 4,
+        "title": "Babak IV: Gema Inti Kuno (Echoes in the Deep Mines)",
+        "subtitle": "Getaran Resonansi di Perut Bumi",
+        "unlock_desc": "Capai Affection Level 6 dengan Rowan/Nessa atau selesaikan 6 Quest Penduduk",
+        "unlock_rule": {"type": "affection_or_quests", "level": 6, "quests_count": 6},
+        "bg_theme": "crystal_cave",
+        "scenes": [
+            {
+                "speaker": "Nessa",
+                "text": "Frekuensi ini tidak salah lagi! Inti Kristal Purba di bawah Reruntuhan Kuno mulai bergetar selaras dengan energi ladang kita!",
+                "visual": "crystal_core_awakening"
+            },
+            {
+                "speaker": "Rowan",
+                "text": "Monster-monster bayangan di kedalaman tambang mulai mundur. Cahaya Aether bangkit kembali menyinari kegelapan!",
+                "visual": "ancient_light"
+            }
+        ]
+    },
+    {
+        "id": "chap_05",
+        "chapter_number": 5,
+        "title": "Babak V: Fajar Modernitas (The Aether Dawn)",
+        "subtitle": "Kelahiran Era Baru: Listrik & Otomasi Magis",
+        "unlock_desc": "Buka Era 4 (Modern Fantasy) atau capai Affection Level 8 dengan Nessa/Mira",
+        "unlock_rule": {"type": "era_or_affection", "era": 4, "level": 8},
+        "bg_theme": "modern_skyline",
+        "scenes": [
+            {
+                "speaker": "Nessa",
+                "text": "Lampu LED kristal menyala di seluruh jalan desa! Sprinkler pintar dan automaton pemanen mulai bekerja tanpa lelah siang dan malam!",
+                "visual": "electric_street"
+            },
+            {
+                "speaker": "Mira",
+                "text": "Kereta dagang modern tiba dari ibukota! Greenvale kini bukan lagi desa terpencil, melainkan pusat peradaban modern termaju di dunia!",
+                "visual": "train_modern_city"
+            }
+        ]
+    },
+    {
+        "id": "chap_06",
+        "chapter_number": 6,
+        "title": "Epilog: Legenda Evergreen (Eternal Fellowship)",
+        "subtitle": "Warisan Abadi Sang Penjaga Lembah Aetherwyn",
+        "unlock_desc": "Capai Affection Level 10 (Soulmate of Aetherwyn) dengan salah satu warga desa!",
+        "unlock_rule": {"type": "affection_any", "level": 10},
+        "bg_theme": "summit_sunrise",
+        "scenes": [
+            {
+                "speaker": "Elara, Rowan, Nessa, Mira",
+                "text": "Di puncak Highland Summit ini, di hadapan panorama matahari terbit, kami mendirikan monumen kehormatan abadi untukmu. Sahabat sejati kami selamanya!",
+                "visual": "grand_monument_evergreen"
+            },
+            {
+                "speaker": "Narator Evergreen",
+                "text": "Dari akar tradisional abad pertengahan menuju puncak peradaban magis modern... Kisah pengelana Aetherwyn kini tertulis abadi dalam legenda Evergreen Chronicles.",
+                "visual": "credits_sunset"
+            }
+        ]
     }
 ]
 

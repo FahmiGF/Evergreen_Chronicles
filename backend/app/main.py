@@ -10,7 +10,16 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
-from app.game_store import game_store, ITEMS_DATABASE, CRAFTING_RECIPES, ZONES_CATALOG, TUTORIAL_QUESTS
+from app.game_store import (
+    game_store,
+    ITEMS_DATABASE,
+    CRAFTING_RECIPES,
+    ZONES_CATALOG,
+    TUTORIAL_QUESTS,
+    NPC_QUESTS_CATALOG,
+    STORYLINE_CHAPTERS,
+    GameSave
+)
 from app.npc_engine import npc_manager
 from app.websocket_manager import world_hub
 
@@ -285,6 +294,378 @@ def claim_tutorial_reward(slot_id: int, step: int = Body(..., embed=True)):
         "current_gold": player["gold"],
         "next_step": step + 1
     }
+
+# ==================== AFFECTION & STORYLINE LOGIC ====================
+AFFECTION_PERKS_TABLE = {
+    "npc_elara": {
+        1: "Penyembuhan Herbal +10%",
+        3: "Teh Stamina Hutan Gratis Setiap Pagi",
+        5: "Pertumbuhan Tanaman Ladang +15% Lebih Cepat",
+        8: "Berkah Pohon Suci: Tanpa Kehilangan Stamina Saat Hujan",
+        10: "Resep Rahasia: Elixir Keabadian Aetherwyn"
+    },
+    "npc_rowan": {
+        1: "Kekuatan Beliung Tambang +5%",
+        3: "Gratis Biaya Tempa & Perbaikan Perkakas",
+        5: "20% Peluang Mendapatkan Ganda Saat Melebur Logam",
+        8: "Penguasaan Senjata Ksatria (+50% Serangan Tebas)",
+        10: "Palu Tempa Masterwork Aether: Tambang Area 3x3 Seketika"
+    },
+    "npc_nessa": {
+        1: "Jangkauan Sprinkler Otomatis +1 Petak",
+        3: "Daya Output Generator Kristal +15%",
+        5: "Diskon Biaya Material Perakitan Mesin 25%",
+        8: "Robot Droid Automaton Asisten Pribadi Terbuka",
+        10: "Reaktor Daya Aether Tanpa Batas (Energi Abadi)"
+    },
+    "npc_mira": {
+        1: "Harga Jual Semua Hasil Panen +5%",
+        3: "Diskon 10% Semua Barang di Toko Mira",
+        5: "Diskon 20% & Stok Benih Langka Tanpa Batas",
+        8: "Bonus Dividen Pengiriman Desa +30% Keuntungan Emas",
+        10: "Mahkota Saudagar Kehormatan (+50% Semua Hadiah Emas)"
+    }
+}
+
+def update_npc_affection(npc: Dict[str, Any], added_points: int) -> Dict[str, Any]:
+    old_lvl = npc.get("affection_level", 0)
+    current_pts = min(1000, max(0, npc.get("friendship_points", 0) + added_points))
+    new_lvl = min(10, current_pts // 100)
+    npc["friendship_points"] = current_pts
+    npc["affection_level"] = new_lvl
+
+    perk_dict = AFFECTION_PERKS_TABLE.get(npc.get("id"), {})
+    unlocked_perks = []
+    for lvl_req, perk_name in sorted(perk_dict.items()):
+        if new_lvl >= lvl_req:
+            unlocked_perks.append(f"Lv.{lvl_req}: {perk_name}")
+    npc["unlocked_perks"] = unlocked_perks
+
+    return {
+        "old_level": old_lvl,
+        "new_level": new_lvl,
+        "leveled_up": new_lvl > old_lvl,
+        "current_points": current_pts,
+        "next_level_points": min(1000, (new_lvl + 1) * 100),
+        "unlocked_perks": unlocked_perks
+    }
+
+def evaluate_storyline_unlocks(save) -> List[Dict[str, Any]]:
+    unlocked_list = list(save.storyline_unlocked or ["chap_prologue"])
+    completed_npc_quests = save.completed_npc_quests or []
+    npcs = {n["id"]: n for n in save.npcs}
+    era_level = save.world.get("era_level", 1)
+
+    evaluated_chapters = []
+    for chap in STORYLINE_CHAPTERS:
+        chap_copy = dict(chap)
+        cid = chap["id"]
+        is_unlocked = cid in unlocked_list or cid == "chap_prologue"
+
+        rule = chap.get("unlock_rule")
+        if not is_unlocked and rule:
+            rtype = rule.get("type")
+            if rtype == "affection_or_tutorial":
+                npc = npcs.get(rule.get("npc_id"), {})
+                if npc.get("affection_level", 0) >= rule.get("level", 1):
+                    is_unlocked = True
+                elif any(q.get("completed") for q in TUTORIAL_QUESTS if q.get("step", 0) >= rule.get("tut_step", 2)):
+                    is_unlocked = True
+            elif rtype == "quest_or_affection":
+                if rule.get("quest_id") in completed_npc_quests:
+                    is_unlocked = True
+                npc = npcs.get(rule.get("npc_id"), {})
+                if npc.get("affection_level", 0) >= rule.get("level", 3):
+                    is_unlocked = True
+            elif rtype == "affection_any":
+                if rule.get("quest_id") and rule.get("quest_id") in completed_npc_quests:
+                    is_unlocked = True
+                target_lvl = rule.get("level", 5)
+                if any(n.get("affection_level", 0) >= target_lvl for n in npcs.values()):
+                    is_unlocked = True
+            elif rtype == "affection_or_quests":
+                target_lvl = rule.get("level", 6)
+                if any(n.get("affection_level", 0) >= target_lvl for n in npcs.values()):
+                    is_unlocked = True
+                if len(completed_npc_quests) >= rule.get("quests_count", 6):
+                    is_unlocked = True
+            elif rtype == "era_or_affection":
+                if era_level >= rule.get("era", 4):
+                    is_unlocked = True
+                target_lvl = rule.get("level", 8)
+                if any(n.get("affection_level", 0) >= target_lvl for n in npcs.values()):
+                    is_unlocked = True
+
+        if is_unlocked and cid not in unlocked_list:
+            unlocked_list.append(cid)
+            save.storyline_unlocked = unlocked_list
+
+        chap_copy["unlocked"] = is_unlocked
+        evaluated_chapters.append(chap_copy)
+
+    return evaluated_chapters
+
+# ==================== NPC QUESTS & AFFECTION ENDPOINTS ====================
+@app.get("/api/v1/game/npc-quests/{slot_id}")
+def get_npc_quests(slot_id: int):
+    """Retrieve all NPC quests with current progress, items needed, and completion status."""
+    save = game_store.get_save(slot_id)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+
+    player = save.player
+    inventory = player.get("inventory", [])
+    active_quests_ids = [q.get("id") for q in (save.active_npc_quests or [])]
+    completed_quests_ids = save.completed_npc_quests or []
+    npcs_dict = {n["id"]: n for n in save.npcs}
+
+    quests_response = []
+    for q in NPC_QUESTS_CATALOG:
+        q_copy = dict(q)
+        qid = q["id"]
+        npc_data = npcs_dict.get(q["npc_id"], {})
+        current_affection = npc_data.get("affection_level", 0)
+        req_affection = q.get("required_affection_level", 0)
+
+        is_completed = qid in completed_quests_ids
+        is_active = qid in active_quests_ids or is_completed
+        is_available = current_affection >= req_affection
+
+        # Calculate current progress
+        current_progress = 0
+        target = q.get("target_count", 1)
+
+        if q.get("type") == "deliver_item":
+            target_item = q.get("target_item")
+            current_progress = sum(s.get("count", 0) for s in inventory if s and s.get("item_id") == target_item)
+            target_item_meta = ITEMS_DATABASE.get(target_item)
+            q_copy["target_item_name"] = target_item_meta.name if target_item_meta else target_item
+        elif q.get("type") == "affection_milestone":
+            target = q.get("target_affection_level", 5)
+            current_progress = max([n.get("affection_level", 0) for n in save.npcs] + [0])
+        elif q.get("type") == "max_affection":
+            target = 10
+            current_progress = max([n.get("affection_level", 0) for n in save.npcs] + [0])
+        elif q.get("type") == "slimes_defeated":
+            target = q.get("target_count", 5)
+            current_progress = target if is_completed else 3
+
+        q_copy["is_available"] = is_available
+        q_copy["is_active"] = is_active
+        q_copy["is_completed"] = is_completed
+        q_copy["current_progress"] = current_progress
+        q_copy["target"] = target
+        q_copy["can_turn_in"] = (current_progress >= target) and not is_completed
+
+        quests_response.append(q_copy)
+
+    return quests_response
+
+@app.post("/api/v1/game/npc-quests/accept/{slot_id}")
+def accept_npc_quest(slot_id: int, quest_id: str = Body(..., embed=True)):
+    """Accept an NPC quest."""
+    save = game_store.get_save(slot_id)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+
+    quest = next((q for q in NPC_QUESTS_CATALOG if q["id"] == quest_id), None)
+    if not quest:
+        raise HTTPException(status_code=404, detail=f"Quest '{quest_id}' not found")
+
+    active_list = save.active_npc_quests or []
+    if any(q.get("id") == quest_id for q in active_list):
+        return {"success": True, "message": "Quest sudah aktif!", "active_quests": active_list}
+
+    active_list.append({
+        "id": quest_id,
+        "npc_id": quest["npc_id"],
+        "title": quest["title"],
+        "target_count": quest.get("target_count", 1),
+        "completed": False
+    })
+    save.active_npc_quests = active_list
+
+    return {
+        "success": True,
+        "message": f"Quest '{quest['title']}' diterima!",
+        "quest": quest,
+        "active_quests": active_list
+    }
+
+@app.post("/api/v1/game/npc-quests/turn-in/{slot_id}")
+def turn_in_npc_quest(slot_id: int, quest_id: str = Body(..., embed=True)):
+    """Turn in NPC quest, deduct requirements, reward gold, aether, and increase affection levels."""
+    save = game_store.get_save(slot_id)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+
+    quest = next((q for q in NPC_QUESTS_CATALOG if q["id"] == quest_id), None)
+    if not quest:
+        raise HTTPException(status_code=404, detail=f"Quest '{quest_id}' not found")
+
+    completed_npc_quests = list(save.completed_npc_quests or [])
+    if quest_id in completed_npc_quests:
+        raise HTTPException(status_code=400, detail="Quest sudah diselesaikan!")
+
+    player = save.player
+    inventory = player.get("inventory", [])
+    npcs_dict = {n["id"]: n for n in save.npcs}
+    target_npc = npcs_dict.get(quest["npc_id"])
+
+    # 1. Verify and deduct requirements
+    qtype = quest.get("type")
+    if qtype == "deliver_item":
+        target_item = quest["target_item"]
+        target_count = quest["target_count"]
+        owned_count = sum(s.get("count", 0) for s in inventory if s and s.get("item_id") == target_item)
+        if owned_count < target_count:
+            item_name = ITEMS_DATABASE.get(target_item)
+            item_label = item_name.name if item_name else target_item
+            raise HTTPException(
+                status_code=400,
+                detail=f"Barang belum cukup! Butuh {target_count} {item_label} (Kamu memiliki {owned_count})"
+            )
+
+        # Deduct
+        needed = target_count
+        for s in inventory:
+            if s and s.get("item_id") == target_item:
+                if s["count"] > needed:
+                    s["count"] -= needed
+                    needed = 0
+                    break
+                else:
+                    needed -= s["count"]
+                    s.clear()
+                    if needed <= 0:
+                        break
+
+    elif qtype == "affection_milestone":
+        target_lvl = quest.get("target_affection_level", 5)
+        target_completed = quest.get("target_quests_completed", 4)
+        has_friend_lvl = any(n.get("affection_level", 0) >= target_lvl for n in save.npcs)
+        has_completed_quests = len(completed_npc_quests) >= target_completed
+        if not (has_friend_lvl or has_completed_quests):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Syarat belum terpenuhi! Capai Affection Level {target_lvl} dengan warga ATAU selesaikan {target_completed} quest penduduk."
+            )
+
+    elif qtype == "max_affection":
+        target_lvl = quest.get("target_affection_level", 10)
+        if not any(n.get("affection_level", 0) >= target_lvl for n in save.npcs):
+            raise HTTPException(status_code=400, detail=f"Butuh Hubungan Tingkat {target_lvl} (Soulmate) dengan salah satu warga!")
+
+    # 2. Add Rewards
+    reward_gold = quest.get("reward_gold", 0)
+    reward_aether = quest.get("reward_aether", 0)
+    player["gold"] += reward_gold
+    player["aether_shards"] += reward_aether
+
+    # Give reward item if any
+    reward_item_id = quest.get("reward_item")
+    if reward_item_id:
+        for slot in inventory:
+            if slot and slot.get("item_id") == reward_item_id:
+                slot["count"] += 1
+                break
+        else:
+            for i, slot in enumerate(inventory):
+                if slot is None:
+                    inventory[i] = {"item_id": reward_item_id, "count": 1}
+                    break
+
+    # 3. Increase Affection Points
+    affection_gain = quest.get("reward_affection", 100)
+    affection_results = []
+
+    if quest["id"] == "quest_mira_friendship":
+        # 'Having Friends with Us!' increases affection for ALL village NPCs!
+        for npc in save.npcs:
+            res = update_npc_affection(npc, affection_gain)
+            affection_results.append({"npc_id": npc["id"], "name": npc["name"], **res})
+    elif target_npc:
+        res = update_npc_affection(target_npc, affection_gain)
+        affection_results.append({"npc_id": target_npc["id"], "name": target_npc["name"], **res})
+
+    # 4. Mark Completed
+    completed_npc_quests.append(quest_id)
+    save.completed_npc_quests = completed_npc_quests
+    save.active_npc_quests = [q for q in (save.active_npc_quests or []) if q.get("id") != quest_id]
+
+    # 5. Evaluate Storyline Unlocks
+    evaluated_chapters = evaluate_storyline_unlocks(save)
+
+    return {
+        "success": True,
+        "message": f"Quest '{quest['title']}' berhasil diselesaikan! (+{reward_gold} G, +{reward_aether} Kristal Aether)",
+        "reward_gold": reward_gold,
+        "reward_aether": reward_aether,
+        "reward_item": reward_item_id,
+        "current_gold": player["gold"],
+        "affection_results": affection_results,
+        "completed_npc_quests": completed_npc_quests,
+        "storyline_chapters": evaluated_chapters
+    }
+
+class NpcGiftRequest(BaseModel):
+    npc_id: str
+    item_id: str
+
+@app.post("/api/v1/game/npc/gift/{slot_id}")
+def give_npc_gift(slot_id: int, req: NpcGiftRequest):
+    """Give a gift to an NPC, increase friendship points and affectionate level up to 10."""
+    save = game_store.get_save(slot_id)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+
+    target_npc = next((n for n in save.npcs if n["id"] == req.npc_id), None)
+    if not target_npc:
+        raise HTTPException(status_code=404, detail=f"NPC '{req.npc_id}' not found")
+
+    player = save.player
+    inventory = player.get("inventory", [])
+
+    # Check item in inventory
+    item_slot = next((s for s in inventory if s and s.get("item_id") == req.item_id), None)
+    if not item_slot or item_slot.get("count", 0) <= 0:
+        raise HTTPException(status_code=400, detail="Item tidak ada di tas!")
+
+    # Deduct 1 item
+    item_slot["count"] -= 1
+    if item_slot["count"] <= 0:
+        for i, s in enumerate(inventory):
+            if s and s.get("item_id") == req.item_id and s["count"] <= 0:
+                inventory[i] = None
+
+    # Check favorite gift
+    is_favorite = req.item_id in target_npc.get("favorite_gifts", [])
+    added_points = 120 if is_favorite else 60
+
+    aff_result = update_npc_affection(target_npc, added_points)
+    item_meta = ITEMS_DATABASE.get(req.item_id)
+    item_name = item_meta.name if item_meta else req.item_id
+
+    # Check storyline unlocks
+    evaluated_chapters = evaluate_storyline_unlocks(save)
+
+    return {
+        "success": True,
+        "is_favorite": is_favorite,
+        "message": f"{target_npc['name']} sangat menyukai {item_name}! (+{added_points} Poin Hubungan)" if is_favorite else f"{target_npc['name']} menerima {item_name}.",
+        "affection_result": aff_result,
+        "inventory": inventory,
+        "storyline_chapters": evaluated_chapters
+    }
+
+@app.get("/api/v1/game/storyline/{slot_id}")
+def get_storyline_chapters(slot_id: int):
+    """Retrieve all Storyline Chapters & Trailer cutscenes with locked/unlocked progress status."""
+    save = game_store.get_save(slot_id)
+    if not save:
+        # Default unlock evaluation
+        return STORYLINE_CHAPTERS
+    return evaluate_storyline_unlocks(save)
 
 @app.get("/api/v1/game/save/{slot_id}")
 def load_game(slot_id: int):
