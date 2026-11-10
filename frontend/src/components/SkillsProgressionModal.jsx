@@ -101,6 +101,44 @@ export default function SkillsProgressionModal({
     }
   };
 
+  const handlePurchasePrestigeUpgrade = async (branchId, upgradeId) => {
+    sounds.playClick();
+    try {
+      const res = await fetch('/api/v1/game/prestige/upgrade', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ branch_id: branchId, upgrade_id: upgradeId })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        sounds.playSuccess();
+        showNotification && showNotification(`⭐ ${data.message}`);
+        fetchSkills();
+      } else {
+        showNotification && showNotification(`❌ ${data.detail || data.error || 'Gagal upgrade prestige'}`);
+      }
+    } catch (err) {
+      console.error('Prestige upgrade error:', err);
+    }
+  };
+
+  const handleResetPrestige = async () => {
+    sounds.playClick();
+    try {
+      const res = await fetch('/api/v1/game/prestige/reset', {
+        method: 'POST'
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        sounds.playSuccess();
+        showNotification && showNotification(`🔄 ${data.message}`);
+        fetchSkills();
+      }
+    } catch (err) {
+      console.error('Prestige reset error:', err);
+    }
+  };
+
   const skillsObj = skillsData?.skills || {};
   const skillList = skillsData?.catalog || [];
   const activeTreeBranches = skillsData?.trees?.[selectedSkillId] || [];
@@ -374,55 +412,176 @@ export default function SkillsProgressionModal({
           {/* TAB 3: PRESTIGE */}
           {!loading && activeTab === 'prestige' && (
             <div className="space-y-4">
-              <div className="bg-gradient-to-r from-purple-950/80 via-slate-900 to-amber-950/80 border border-purple-500/40 p-4 rounded-xl text-center">
-                <span className="text-4xl block mb-2">👑</span>
-                <h3 className="font-serif font-black text-xl text-purple-200">Sistem Kehormatan Prestige</h3>
-                <p className="text-xs text-stone-300 max-w-xl mx-auto mt-1">
-                  Saat keahlian mencapai Level 50+ (Mastery), Anda dapat mengaktifkan Prestige. Prestige memberikan gelar legendaris, badge kehormatan, dan efek permanen tanpa menghapus progres atau inventaris Anda!
-                </p>
+              {/* Prestige Stats Banner */}
+              <div className="bg-gradient-to-r from-purple-950/90 via-slate-900 to-amber-950/90 border border-purple-500/50 p-4 rounded-xl flex flex-wrap items-center justify-between gap-4 shadow-lg">
+                <div className="flex items-center gap-3">
+                  <span className="text-4xl animate-bounce">👑</span>
+                  <div>
+                    <h3 className="font-serif font-black text-lg text-purple-200">
+                      Sistem Kehormatan Prestige & Upgrade Permanen (V6)
+                    </h3>
+                    <p className="text-xs text-stone-300">
+                      Tingkat Prestige: <strong className="text-amber-400 font-mono font-black">Rank {skillsData?.prestige_rank || 1}</strong> • Saldo PP: <strong className="text-amber-300 font-mono font-black text-sm">{skillsData?.prestige_points || 0} PP</strong> (Terpakai: {skillsData?.spent_prestige_points || 0} PP)
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleResetPrestige}
+                  disabled={(skillsData?.spent_prestige_points || 0) <= 0}
+                  className="px-3 py-1.5 bg-stone-800 hover:bg-stone-700 disabled:opacity-40 text-stone-200 rounded-lg text-xs font-bold border border-purple-400/50 transition flex items-center gap-1.5 shadow"
+                  title="Refund seluruh PP yang telah dibelanjakan tanpa menghapus inventaris, tanaman, atau keahlian Anda."
+                >
+                  <span>🔄</span>
+                  <span>Reset Saldo PP (Aman)</span>
+                </button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {skillList.map((cat) => {
-                  const sk = skillsObj[cat.id] || { level: 1, prestige_level: 0 };
-                  const eligible = sk.level >= 50;
+              {/* 6 PERMANENT UPGRADE BRANCHES */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold text-amber-300 uppercase tracking-wider">
+                    Pohon Cabang Upgrade Permanen (6 Cabang)
+                  </h4>
+                  <span className="text-[11px] text-stone-400">Efek pasif berlaku selamanya di seluruh karakter</span>
+                </div>
 
-                  return (
-                    <div
-                      key={cat.id}
-                      className="p-3 bg-slate-800/80 border border-stone-700 rounded-xl flex items-center justify-between"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl">{cat.icon}</span>
-                        <div>
-                          <div className="font-bold text-stone-100 flex items-center gap-2">
-                            {cat.name}
-                            {sk.prestige_level > 0 && (
-                              <span className="text-[10px] bg-purple-500/20 text-purple-300 border border-purple-400 font-bold px-1.5 py-0.5 rounded">
-                                Prestige {sk.prestige_level}
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-xs text-stone-400">
-                            Status: <span className="font-mono text-amber-300">Level {sk.level}/50</span>
-                          </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {(skillsData?.prestige_branches || []).map((branch) => {
+                    const activeUpgs = skillsData?.prestige_upgrades || [];
+
+                    return (
+                      <div key={branch.id} className="p-3 bg-slate-800/80 border border-stone-700 rounded-xl space-y-2">
+                        <div className="flex items-center gap-2 border-b border-stone-700/60 pb-1.5">
+                          <span className="text-xl">{branch.icon}</span>
+                          <span className="font-bold text-xs text-stone-100">{branch.name}</span>
+                        </div>
+
+                        <div className="space-y-2">
+                          {branch.upgrades.map((u) => {
+                            const isPurchased = activeUpgs.includes(u.id);
+                            const canAfford = (skillsData?.prestige_points || 0) >= u.cost;
+
+                            return (
+                              <div
+                                key={u.id}
+                                className={`p-2 rounded-lg border text-xs flex items-center justify-between gap-2 transition ${
+                                  isPurchased
+                                    ? 'bg-purple-950/40 border-purple-500/60'
+                                    : 'bg-slate-900/60 border-stone-800'
+                                }`}
+                              >
+                                <div className="truncate flex-1">
+                                  <div className="font-bold text-stone-200 truncate flex items-center gap-1.5">
+                                    <span>{u.name}</span>
+                                    {isPurchased && (
+                                      <span className="text-[9px] bg-purple-500/20 text-purple-300 border border-purple-400 px-1 py-0.2 rounded font-bold">
+                                        Aktif
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-[10px] text-stone-400 truncate">{u.desc}</div>
+                                </div>
+
+                                <div>
+                                  {isPurchased ? (
+                                    <span className="text-[11px] font-bold text-emerald-400 font-mono">
+                                      ✓ Aktif
+                                    </span>
+                                  ) : (
+                                    <button
+                                      disabled={!canAfford}
+                                      onClick={() => handlePurchasePrestigeUpgrade(branch.id, u.id)}
+                                      className={`px-2.5 py-1 rounded text-[11px] font-bold transition flex items-center gap-1 ${
+                                        canAfford
+                                          ? 'bg-amber-600 hover:bg-amber-500 text-white shadow'
+                                          : 'bg-stone-800 text-stone-500 cursor-not-allowed'
+                                      }`}
+                                    >
+                                      <span>Beli</span>
+                                      <span className="font-mono">({u.cost} PP)</span>
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
+                    );
+                  })}
+                </div>
+              </div>
 
-                      <button
-                        disabled={!eligible}
-                        onClick={() => handleActivatePrestige(cat.id)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                          eligible
-                            ? 'bg-purple-600 hover:bg-purple-500 text-white shadow ring-1 ring-purple-400'
-                            : 'bg-stone-800 text-stone-600 cursor-not-allowed'
-                        }`}
+              {/* SKILL SYNERGIES */}
+              {skillsData?.synergies && skillsData.synergies.length > 0 && (
+                <div className="p-3.5 bg-slate-950/80 border border-stone-800 rounded-xl space-y-2">
+                  <h4 className="text-xs font-bold text-teal-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>✨</span> Sinergi Lintas Keahlian (Skill Synergies)
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    {skillsData.synergies.map((syn) => (
+                      <div key={syn.id} className="p-2 bg-slate-900 rounded-lg border border-stone-800 flex items-center justify-between">
+                        <div>
+                          <span className="font-bold text-stone-200 block">{syn.name}</span>
+                          <span className="text-[10px] text-stone-400">{syn.skills?.join(' + ')}</span>
+                        </div>
+                        <span className="text-[10px] font-bold bg-teal-500/20 text-teal-300 border border-teal-400 px-1.5 py-0.5 rounded">
+                          +{Math.round((syn.bonus_mult - 1) * 100)}% Efek
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* SKILL MASTERY PRESTIGE ELEVATION (LV 50+) */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold text-stone-400 uppercase tracking-wider">
+                  Aktivasi Mastery Tiap Keahlian (Syarat: Level 50+)
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                  {skillList.map((cat) => {
+                    const sk = skillsObj[cat.id] || { level: 1, prestige_level: 0 };
+                    const eligible = sk.level >= 50;
+
+                    return (
+                      <div
+                        key={cat.id}
+                        className="p-2.5 bg-slate-800/80 border border-stone-700 rounded-xl flex items-center justify-between"
                       >
-                        {eligible ? '👑 Aktivasi Prestige' : 'Butuh Lv. 50'}
-                      </button>
-                    </div>
-                  );
-                })}
+                        <div className="flex items-center gap-2.5">
+                          <span className="text-xl">{cat.icon}</span>
+                          <div>
+                            <div className="font-bold text-xs text-stone-100 flex items-center gap-1.5">
+                              {cat.name}
+                              {sk.prestige_level > 0 && (
+                                <span className="text-[9px] bg-purple-500/20 text-purple-300 border border-purple-400 font-bold px-1 rounded">
+                                  P.{sk.prestige_level}
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[10px] text-stone-400 font-mono">
+                              Level {sk.level}/50
+                            </div>
+                          </div>
+                        </div>
+
+                        <button
+                          disabled={!eligible}
+                          onClick={() => handleActivatePrestige(cat.id)}
+                          className={`px-2.5 py-1 rounded text-[11px] font-bold transition ${
+                            eligible
+                              ? 'bg-purple-600 hover:bg-purple-500 text-white shadow ring-1 ring-purple-400'
+                              : 'bg-stone-800 text-stone-600 cursor-not-allowed'
+                          }`}
+                        >
+                          {eligible ? '👑 Prestige (+10 PP)' : 'Butuh Lv. 50'}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           )}

@@ -14,6 +14,9 @@ from app.pets_engine import PetsEngine
 from app.automation_engine import AutomationEngine
 from app.events_engine import EventsEngine
 from app.journal_engine import JournalEngine
+from app.encyclopedia_engine import EncyclopediaEngine
+from app.leaderboard_engine import LeaderboardEngine
+from app.admin_engine import AdminEngine
 
 class Item(BaseModel):
     id: str
@@ -75,7 +78,7 @@ class GameSave(BaseModel):
     slot_id: int
     save_name: str
     saved_at: str
-    version: Optional[str] = "4.0.0"
+    version: Optional[str] = "6.0.0"
     checksum: Optional[str] = None
     player: Dict[str, Any]
     world: Dict[str, Any]
@@ -602,6 +605,25 @@ class EvergreenGameEngine:
                 "fuel": 100,
                 "max_fuel": 100,
                 "speed_boost": 1.75
+            },
+            "admin_role": "super_admin",
+            "equipped_title": "Pionir Lembah Evergreen",
+            "prestige_points": 5,
+            "spent_prestige_points": 0,
+            "prestige_rank": 1,
+            "prestige_upgrades": [],
+            "encyclopedia_discoveries": {
+                "crop_wheat": {"discovered_at": datetime.datetime.utcnow().isoformat(), "count": 4},
+                "crop_parsnip": {"discovered_at": datetime.datetime.utcnow().isoformat(), "count": 6},
+                "flw_wild_daisy": {"discovered_at": datetime.datetime.utcnow().isoformat(), "count": 2},
+                "tree_ancient_oak": {"discovered_at": datetime.datetime.utcnow().isoformat(), "count": 5},
+                "biome_evergreen_valley": {"discovered_at": datetime.datetime.utcnow().isoformat(), "count": 1}
+            },
+            "claimed_encyclopedia_milestones": {},
+            "privacy_settings": {
+                "public_profile": True,
+                "show_net_worth": True,
+                "show_guild": True
             }
         }
 
@@ -715,7 +737,7 @@ class EvergreenGameEngine:
             completed_npc_quests=[],
             storyline_unlocked=["chap_prologue", "chap_01"],
             shipping_bin=[],
-            version="4.0.0",
+            version="6.0.0",
             checksum="genesis_verified",
             civilization={
                 "current_era": "medieval",
@@ -843,6 +865,15 @@ class EvergreenGameEngine:
             AutomationEngine.initialize_automation(save.player)
             EventsEngine.initialize_events(save.world, save.player)
             JournalEngine.initialize_journal(save.player)
+
+            # Ensure V6 Expansion Systems in loaded save
+            EncyclopediaEngine.ensure_encyclopedia_state(save.player)
+            if "admin_role" not in save.player:
+                save.player["admin_role"] = "super_admin"
+            if "equipped_title" not in save.player:
+                save.player["equipped_title"] = "Pionir Lembah Evergreen"
+            if "privacy_settings" not in save.player:
+                save.player["privacy_settings"] = {"public_profile": True, "show_net_worth": True, "show_guild": True}
 
         return save
 

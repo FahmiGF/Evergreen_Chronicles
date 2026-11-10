@@ -1,11 +1,11 @@
-# 🌲 EVERGREEN CHRONICLES ONLINE (v1.0 — v4.0 Ultimate Expansion)
+# 🌲 EVERGREEN CHRONICLES ONLINE (v1.0 — v6.0 Mega Expansion)
 
 > **Cozy Fantasy Life-Simulation Sandbox, Mechanized Farming, Living Civilization & Endless Exploration**  
 > *Author: FahmiGF — Medieval to Modern Fantasy Architecture*
 
 [![Build Status](https://img.shields.io/badge/Vite%20Build-Passed%20(0%20errors)-emerald.svg)]()
-[![Automated Tests](https://img.shields.io/badge/Pytest%20API%20Suite-43%2F43%20Passed-blue.svg)]()
-[![Game Save](https://img.shields.io/badge/Persistence-Checksum%20v4.0.0-amber.svg)]()
+[![Automated Tests](https://img.shields.io/badge/Pytest%20API%20Suite-55%2F55%20Passed-blue.svg)]()
+[![Game Save](https://img.shields.io/badge/Persistence-Checksum%20v6.0.0-amber.svg)]()
 [![License](https://img.shields.io/badge/License-MIT-purple.svg)]()
 
 ---
@@ -17,6 +17,7 @@ flowchart LR
     V1["v1.0 Core & Mechanization\n• 3D Isometric View\n• CAD Blueprint Mode\n• Drivable Tractor\n• 8 Tree Varieties"] --> V2["v2.0 World & Studio\n• Landscape Editor\n• Character Studio (10 Races)\n• Layered Wardrobe\n• 8 Terrain Brushes"]
     V2 --> V3["v3.0 Living Civilization\n• 7 Simulation Layers\n• Dynamic Market Pricing\n• Autonomous NPC Brains\n• 4 Eras Evolution"]
     V3 --> V4["v4.0 Ultimate Expansion\n• 12 Skills & Perk Trees\n• 10 Tool Tiers\n• 10 Mounts & Stables\n• Mining 60 Floors\n• Ocean Fishing & Boats\n• 13 Factory Buildings\n• 8 Timed Portals\n• Halloween Madness\n• Collection Journal & Guilds"]
+    V4 --> V6["v6.0 Mega Expansion\n• 34 Skills across 9 Categories\n• Permanent Prestige (6 Branches)\n• Grand Encyclopedia (38 Categories)\n• Global Leaderboards (20 Categories)\n• Evergreen Control Center (24 Admin Modules)\n• Server-Authoritative Anti-Cheat Net Worth"]
 ```
 
 ---
@@ -82,6 +83,23 @@ flowchart LR
   - 25+ structured achievements with gold claims.
   - 7 Player Guilds with passive profession perks.
 
+### 👑 Version 6.0.0 — Mega Expansion: Progression, Encyclopedia, Leaderboards & Control Center
+- **Advanced Mastery Engine & 34 Skills (`[K]`)**:
+  - Expanded across 9 categories (*Agriculture*, *Livestock*, *Industry*, *Nature*, *Adventure*, *Ocean*, *Social*, *Technology*, *Creativity*).
+  - 6 Cross-discipline **Skill Synergies** (e.g. Agronomy + Cooking, Mining + Engineering, Robotics + Farming).
+  - **6 Permanent Prestige Upgrade Branches** (*Prosperity*, *Nature*, *Industry*, *Discovery*, *Fellowship*, *Innovation*) with 100% safe non-destructive PP refunds.
+- **Grand Encyclopedia & World Journal (`[J]`)**:
+  - 38 index categories tracking crops, vegetables, flowers, fish, artifacts, recipes, pets, mounts, robots, biomes, portals, and weather.
+  - Category completion tracking and 5 milestone reward tiers (10%, 25%, 50%, 75%, 100%) with gold, PP, and exclusive titles.
+- **Global Leaderboards & Anti-Cheat Validation**:
+  - 20 competitive categories with *All-Time*, *Season*, *Monthly*, *Weekly*, and *Daily* filters.
+  - Server-authoritative Net Worth valuation formula preventing client currency manipulation.
+  - Granular privacy toggles (*Public Profile*, *Show Net Worth*, *Show Guild*).
+- **In-Game Admin Dashboard (Evergreen Control Center) (`[F1]` / `[~]`)**:
+  - Compact `[⚙️ ADMIN]` tab on HUD with role-based access control (RBAC).
+  - 24 Control modules: System Telemetry (60 TPS), Staged Isolated Event Testing (Carnival, Halloween, Starfall), Quest Lab with cycle detection, World Clock & Season shifter, Weather changer, Economy price shock simulator, Farming instant crop booster, Robotics fleet diagnostics, and Automated QA Suite runner.
+  - Immutable append-only audit trail logging all administrative actions.
+
 ---
 
 ## 🎮 Keyboard Controls & Hotkeys
@@ -91,7 +109,9 @@ flowchart LR
 | **`W, A, S, D`** / **Arrows** | Gerak Karakter / Kemudi Traktor / Satwa Tunggangan |
 | **`[V]`** | Ganti Tampilan Kamera: **2D Top-Down** ⟷ **3D Isometrik** |
 | **`[B]`** | Mode Arsitektur Cetak Biru CAD |
-| **`[K]`** | Buka Pusat Progresi & 12 Keahlian (Skills) |
+| **`[K]`** | Buka Pusat Progresi, 34 Keahlian & Cabang Prestige |
+| **`[J]`** | Buka Grand Encyclopedia 38 Kategori & Jurnal Dunia |
+| **`[F1]`** / **`[~]`** | Buka Evergreen Control Center (Admin Dashboard) |
 | **`[R]`** | Buka Kandang Satwa & Tunggangi Mount |
 | **`[M]`** | Buka Goa Tambang 60 Lantai & Mesin Pengolah |
 | **`[N]`** / **`[X]`** | Buka Portal Dimensi & Event Musiman Halloween |
@@ -103,7 +123,6 @@ flowchart LR
 | **`[F]`** | Melempar Joran Pancing di Perairan |
 | **`[Q]`** | Buka Log Buku Tugas Warga |
 | **`[U]`** | Buka Tingkat Kasih Penduduk Desa |
-| **`[J]`** | Buka Alur Cerita 7 Bab Sinematik |
 | **`[H]`** | Membunyikan Klakson Traktor (*Honk!*) |
 | **`[1, 2, 3]`** | Ganti Implemen Traktor: Bajak Tanah / Semprot Air / Babat Rumput |
 | **`[ESC]`** | Menutup jendela modal aktif |

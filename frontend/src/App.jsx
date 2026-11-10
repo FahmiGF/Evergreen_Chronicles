@@ -28,6 +28,9 @@ import MountsStableModal from './components/MountsStableModal';
 import UndergroundMiningModal from './components/UndergroundMiningModal';
 import PortalsEventModal from './components/PortalsEventModal';
 import CollectionJournalModal from './components/CollectionJournalModal';
+import GrandEncyclopediaModal from './components/GrandEncyclopediaModal';
+import LeaderboardModal from './components/LeaderboardModal';
+import AdminControlCenterModal from './components/AdminControlCenterModal';
 import { sounds } from './game/SoundFx';
 import { multiplayer } from './game/MultiplayerManager';
 
@@ -74,6 +77,9 @@ export default function App() {
   const [miningOpen, setMiningOpen] = useState(false);
   const [portalsOpen, setPortalsOpen] = useState(false);
   const [collectionsOpen, setCollectionsOpen] = useState(false);
+  const [encyclopediaOpen, setEncyclopediaOpen] = useState(false);
+  const [leaderboardOpen, setLeaderboardOpen] = useState(false);
+  const [adminOpen, setAdminOpen] = useState(false);
   const [activeLandscapeBrush, setActiveLandscapeBrush] = useState('grass');
   const [landscapeBrushRadius, setLandscapeBrushRadius] = useState(1);
   const [currentZoneId, setCurrentZoneId] = useState('zone_farm');
@@ -254,7 +260,12 @@ export default function App() {
         setAffectionOpen((prev) => !prev);
       } else if (e.code === 'KeyJ') {
         e.preventDefault();
-        setStorylineOpen((prev) => !prev);
+        setEncyclopediaOpen((prev) => !prev);
+        sounds.playClick();
+      } else if (e.code === 'F1' || e.code === 'Backquote') {
+        e.preventDefault();
+        setAdminOpen((prev) => !prev);
+        sounds.playClick();
       } else if (e.code === 'KeyP') {
         e.preventDefault();
         setCharacterStudioOpen((prev) => !prev);
@@ -296,6 +307,9 @@ export default function App() {
         setMiningOpen(false);
         setPortalsOpen(false);
         setCollectionsOpen(false);
+        setEncyclopediaOpen(false);
+        setLeaderboardOpen(false);
+        setAdminOpen(false);
         setBedOpen(false);
         setGuideOpen(false);
         setRosterOpen(false);
@@ -392,6 +406,9 @@ export default function App() {
         onOpenMining={() => setMiningOpen(true)}
         onOpenPortals={() => setPortalsOpen(true)}
         onOpenCollections={() => setCollectionsOpen(true)}
+        onOpenEncyclopedia={() => setEncyclopediaOpen(true)}
+        onOpenLeaderboard={() => setLeaderboardOpen(true)}
+        onOpenAdmin={() => setAdminOpen(true)}
         onToggleLandscapePainter={() => setLandscapePainterOpen((prev) => !prev)}
         isLandscapePainterActive={landscapePainterOpen}
         onOpenBed={() => setBedOpen(true)}
@@ -682,6 +699,27 @@ export default function App() {
       <CollectionJournalModal
         isOpen={collectionsOpen}
         onClose={() => setCollectionsOpen(false)}
+        gameState={gameState}
+        setGameState={setGameState}
+        showNotification={showNotification}
+      />
+
+      {/* V6 MEGA EXPANSION MODALS */}
+      <GrandEncyclopediaModal
+        isOpen={encyclopediaOpen}
+        onClose={() => setEncyclopediaOpen(false)}
+        showNotification={showNotification}
+      />
+
+      <LeaderboardModal
+        isOpen={leaderboardOpen}
+        onClose={() => setLeaderboardOpen(false)}
+        showNotification={showNotification}
+      />
+
+      <AdminControlCenterModal
+        isOpen={adminOpen}
+        onClose={() => setAdminOpen(false)}
         gameState={gameState}
         setGameState={setGameState}
         showNotification={showNotification}

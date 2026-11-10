@@ -35,7 +35,27 @@ from app.civilization_engine import (
     TOWN_BUSINESSES,
     LIVING_NPCS_BRAIN
 )
-from app.progression_engine import ProgressionEngine, SKILLS_CATALOG, MILESTONES, SKILL_TREES_DATA
+from app.progression_engine import (
+    ProgressionEngine,
+    SKILLS_CATALOG,
+    MILESTONES,
+    SKILL_TREES_DATA,
+    PRESTIGE_BRANCHES,
+    SKILL_SYNERGIES
+)
+from app.encyclopedia_engine import (
+    EncyclopediaEngine,
+    ENCYCLOPEDIA_CATEGORIES,
+    MILESTONE_TIERS
+)
+from app.leaderboard_engine import (
+    LeaderboardEngine,
+    LEADERBOARD_CATEGORIES
+)
+from app.admin_engine import (
+    AdminEngine,
+    ROLES_PERMISSIONS
+)
 from app.equipment_engine import EquipmentEngine, TOOL_TIERS, TOOL_TYPES, ENCHANTMENTS_CATALOG
 from app.mounts_engine import MountsEngine, MOUNTS_CATALOG, STABLE_TIERS
 from app.mining_engine import MiningEngine, MINING_ZONES, MINERALS_CATALOG, MACHINERY_RECIPES
@@ -1367,6 +1387,12 @@ def get_player_skills():
         "catalog": SKILLS_CATALOG,
         "milestones": MILESTONES,
         "trees": SKILL_TREES_DATA,
+        "prestige_points": save.player.get("prestige_points", 0),
+        "spent_prestige_points": save.player.get("spent_prestige_points", 0),
+        "prestige_rank": save.player.get("prestige_rank", 1),
+        "prestige_upgrades": save.player.get("prestige_upgrades", []),
+        "prestige_branches": PRESTIGE_BRANCHES,
+        "synergies": SKILL_SYNERGIES,
         "prestige_badges": save.player.get("prestige_badges", [])
     }
 
@@ -1403,6 +1429,26 @@ def activate_player_skill_prestige(payload: Dict[str, Any] = Body(...)):
     result = ProgressionEngine.activate_prestige(save.player, skill_id)
     if not result.get("success", False):
         raise HTTPException(status_code=400, detail=result.get("error", "Gagal aktivasi prestige."))
+    return result
+
+@app.post("/api/v1/game/prestige/upgrade")
+def purchase_player_prestige_upgrade(payload: Dict[str, Any] = Body(...)):
+    branch_id = payload.get("branch_id")
+    upgrade_id = payload.get("upgrade_id")
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    result = ProgressionEngine.purchase_prestige_upgrade(save.player, branch_id, upgrade_id)
+    if not result.get("success", False):
+        raise HTTPException(status_code=400, detail=result.get("error", "Pembelian upgrade prestige gagal."))
+    return result
+
+@app.post("/api/v1/game/prestige/reset")
+def reset_player_prestige_points():
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    result = ProgressionEngine.reset_prestige_points(save.player)
     return result
 
 # --- 2. TOOLS & EQUIPMENT SYSTEM ---
@@ -1759,6 +1805,237 @@ def join_player_guild(payload: Dict[str, Any] = Body(...)):
     if not result.get("success", False):
         raise HTTPException(status_code=400, detail=result.get("error", "Gagal bergabung ke guild."))
     return result
+
+# ==================== V6 EXPANSION: ENCYCLOPEDIA, LEADERBOARDS & ADMIN CONTROL CENTER ====================
+
+# --- A. GRAND ENCYCLOPEDIA (38 CATEGORIES) ---
+@app.get("/api/v1/game/encyclopedia/categories")
+def get_encyclopedia_categories():
+    return {
+        "categories": EncyclopediaEngine.get_categories(),
+        "milestone_tiers": MILESTONE_TIERS
+    }
+
+@app.get("/api/v1/game/encyclopedia/entries")
+def get_encyclopedia_entries(
+    category: Optional[str] = "all",
+    search: Optional[str] = None,
+    page: int = 1,
+    limit: int = 12
+):
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    return EncyclopediaEngine.get_entries_page(
+        player=save.player,
+        category=category,
+        search=search,
+        page=page,
+        limit=limit
+    )
+
+@app.post("/api/v1/game/encyclopedia/discover")
+def record_encyclopedia_discovery(payload: Dict[str, Any] = Body(...)):
+    entry_id = payload.get("entry_id")
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    result = EncyclopediaEngine.discover_entry(save.player, entry_id)
+    return result
+
+@app.post("/api/v1/game/encyclopedia/claim-milestone")
+def claim_encyclopedia_milestone(payload: Dict[str, Any] = Body(...)):
+    category = payload.get("category", "overall")
+    percent = payload.get("percent", 10)
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    result = EncyclopediaEngine.claim_milestone_reward(save.player, category, int(percent))
+    if not result.get("success", False):
+        raise HTTPException(status_code=400, detail=result.get("error", "Klaim milestone gagal."))
+    return result
+
+# --- B. GLOBAL LEADERBOARDS & ANTI-CHEAT ---
+@app.get("/api/v1/game/leaderboards/categories")
+def get_leaderboard_categories():
+    return {
+        "categories": LEADERBOARD_CATEGORIES,
+        "periods": ["all_time", "season", "monthly", "weekly", "daily"]
+    }
+
+@app.get("/api/v1/game/leaderboards/rankings")
+def get_leaderboard_rankings(
+    category: str = "overall_mastery",
+    period: str = "all_time",
+    page: int = 1,
+    limit: int = 10
+):
+    save = game_store.get_save(1)
+    player_data = save.player if save else None
+    farm_grid = None
+    if save and hasattr(save, "farm_grid"):
+        farm_grid = [t for row in save.farm_grid for t in row]
+
+    return LeaderboardEngine.get_leaderboard_page(
+        category=category,
+        period=period,
+        player=player_data,
+        farm_grid=farm_grid,
+        page=page,
+        limit=limit
+    )
+
+@app.get("/api/v1/game/leaderboards/profile")
+def get_leaderboard_profile():
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    farm_grid = [t for row in save.farm_grid for t in row] if hasattr(save, "farm_grid") else None
+    return LeaderboardEngine.get_player_profile(save.player, farm_grid)
+
+@app.post("/api/v1/game/leaderboards/privacy")
+def update_leaderboard_privacy(payload: Dict[str, Any] = Body(...)):
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    return LeaderboardEngine.update_privacy(save.player, payload)
+
+# --- C. IN-GAME ADMIN CONTROL CENTER (EVERGREEN DASHBOARD) ---
+@app.get("/api/v1/admin/telemetry")
+def get_admin_telemetry():
+    save = game_store.get_save(1)
+    role = save.player.get("admin_role", "super_admin") if save else "player"
+    if not AdminEngine.check_permission(role, "telemetry:read"):
+        raise HTTPException(status_code=403, detail="Akses ditolak: role tidak memiliki izin membaca telemetri.")
+    return AdminEngine.get_system_telemetry()
+
+@app.get("/api/v1/admin/events")
+def get_admin_staged_events():
+    return {
+        "events": AdminEngine.get_staged_events()
+    }
+
+@app.post("/api/v1/admin/events/manage")
+def manage_admin_event(payload: Dict[str, Any] = Body(...)):
+    event_id = payload.get("event_id")
+    action = payload.get("action", "start")
+    reason = payload.get("reason", "Pengujian staging event")
+    save = game_store.get_save(1)
+    role = save.player.get("admin_role", "super_admin") if save else "player"
+    admin_name = save.player.get("name", "Admin") if save else "Admin"
+
+    result = AdminEngine.manage_event(event_id, action, admin_name, role, reason)
+    if not result.get("success", False):
+        raise HTTPException(status_code=400, detail=result.get("error", "Gagal mengelola event."))
+    return result
+
+@app.post("/api/v1/admin/quests/simulate")
+def simulate_admin_quest(payload: Dict[str, Any] = Body(...)):
+    quest_id = payload.get("quest_id")
+    objective_idx = payload.get("objective_idx", 0)
+    reason = payload.get("reason", "Pengujian simulasi quest")
+    save = game_store.get_save(1)
+    role = save.player.get("admin_role", "super_admin") if save else "player"
+    admin_name = save.player.get("name", "Admin") if save else "Admin"
+
+    result = AdminEngine.simulate_quest(quest_id, objective_idx, admin_name, role, reason)
+    if not result.get("success", False):
+        raise HTTPException(status_code=400, detail=result.get("error", "Gagal simulasi quest."))
+    return result
+
+@app.post("/api/v1/admin/world/clock")
+def adjust_admin_world_clock(payload: Dict[str, Any] = Body(...)):
+    hours = int(payload.get("hours", 1))
+    season = payload.get("season")
+    reason = payload.get("reason", "Pengujian rotasi waktu")
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    role = save.player.get("admin_role", "super_admin")
+    admin_name = save.player.get("name", "Admin")
+
+    result = AdminEngine.adjust_world_clock(save.world, hours, season, admin_name, role, reason)
+    if not result.get("success", False):
+        raise HTTPException(status_code=400, detail=result.get("error", "Gagal mengubah jam dunia."))
+    return result
+
+@app.post("/api/v1/admin/world/weather")
+def set_admin_weather(payload: Dict[str, Any] = Body(...)):
+    weather = payload.get("weather", "Sunny")
+    reason = payload.get("reason", "Pengujian kondisi cuaca")
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    role = save.player.get("admin_role", "super_admin")
+    admin_name = save.player.get("name", "Admin")
+
+    result = AdminEngine.set_weather(save.world, weather, admin_name, role, reason)
+    if not result.get("success", False):
+        raise HTTPException(status_code=400, detail=result.get("error", "Gagal mengubah cuaca."))
+    return result
+
+@app.post("/api/v1/admin/economy/simulate")
+def simulate_admin_economy(payload: Dict[str, Any] = Body(...)):
+    commodity = payload.get("commodity", "wheat")
+    multiplier = float(payload.get("multiplier", 1.5))
+    reason = payload.get("reason", "Simulasi lonjakan harga pasar")
+    save = game_store.get_save(1)
+    role = save.player.get("admin_role", "super_admin") if save else "player"
+    admin_name = save.player.get("name", "Admin") if save else "Admin"
+
+    result = AdminEngine.simulate_economy_shock(commodity, multiplier, admin_name, role, reason)
+    if not result.get("success", False):
+        raise HTTPException(status_code=400, detail=result.get("error", "Gagal simulasi ekonomi."))
+    return result
+
+@app.post("/api/v1/admin/farming/boost")
+def boost_admin_farming(payload: Dict[str, Any] = Body(...)):
+    reason = payload.get("reason", "Pengujian pematangan tanaman instan")
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    role = save.player.get("admin_role", "super_admin")
+    admin_name = save.player.get("name", "Admin")
+
+    flat_grid = [t for row in save.farm_grid for t in row]
+    result = AdminEngine.boost_all_crops(flat_grid, admin_name, role, reason)
+    if not result.get("success", False):
+        raise HTTPException(status_code=400, detail=result.get("error", "Gagal mematangkan tanaman."))
+    return result
+
+@app.get("/api/v1/admin/robotics/diagnose")
+def diagnose_admin_robotics():
+    save = game_store.get_save(1)
+    role = save.player.get("admin_role", "super_admin") if save else "player"
+    admin_name = save.player.get("name", "Admin") if save else "Admin"
+
+    result = AdminEngine.diagnose_robotics(admin_name, role)
+    if not result.get("success", False):
+        raise HTTPException(status_code=400, detail=result.get("error", "Gagal diagnostik robot."))
+    return result
+
+@app.post("/api/v1/admin/qa/run")
+def run_admin_qa_suite(payload: Dict[str, Any] = Body(...)):
+    suite_name = payload.get("suite_name", "Full V6 Regression Suite")
+    save = game_store.get_save(1)
+    role = save.player.get("admin_role", "super_admin") if save else "player"
+    admin_name = save.player.get("name", "Admin") if save else "Admin"
+
+    result = AdminEngine.run_qa_automation_suite(suite_name, admin_name, role)
+    if not result.get("success", False):
+        raise HTTPException(status_code=400, detail=result.get("error", "Gagal menjalankan suite QA."))
+    return result
+
+@app.get("/api/v1/admin/audit-logs")
+def get_admin_audit_logs(limit: int = 50, search: Optional[str] = None):
+    save = game_store.get_save(1)
+    role = save.player.get("admin_role", "super_admin") if save else "player"
+    if not AdminEngine.check_permission(role, "audit:read"):
+        raise HTTPException(status_code=403, detail="Akses ditolak: role tidak memiliki izin membaca audit log.")
+    return {
+        "logs": AdminEngine.get_audit_logs(limit=limit, search=search)
+    }
+
 
 # ==================== STATIC FRONTEND SERVING ====================
 frontend_dist = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"

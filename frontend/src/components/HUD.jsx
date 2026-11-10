@@ -31,6 +31,9 @@ export default function HUD({
   onOpenMining,
   onOpenPortals,
   onOpenCollections,
+  onOpenEncyclopedia,
+  onOpenLeaderboard,
+  onOpenAdmin,
   onToggleLandscapePainter,
   isLandscapePainterActive = false,
   onReturnToMenu,
@@ -354,6 +357,34 @@ export default function HUD({
         >
           <span>📖</span>
           <span>Koleksi [Z]</span>
+        </button>
+
+        {/* V6 MEGA EXPANSION BUTTONS */}
+        <button
+          onClick={() => { sounds.playClick(); onOpenEncyclopedia && onOpenEncyclopedia(); }}
+          title="Grand Encyclopedia 38 Kategori & Jurnal [J]"
+          className="bg-emerald-950/90 hover:bg-emerald-900 text-emerald-300 border border-emerald-400 px-2 py-1 rounded-md text-xs font-semibold transition flex items-center space-x-1 ring-1 ring-emerald-400/50"
+        >
+          <span>📚</span>
+          <span>Ensiklopedia [J]</span>
+        </button>
+
+        <button
+          onClick={() => { sounds.playClick(); onOpenLeaderboard && onOpenLeaderboard(); }}
+          title="Papan Peringkat Global 20 Kategori"
+          className="bg-amber-950/90 hover:bg-amber-900 text-amber-300 border border-amber-400 px-2 py-1 rounded-md text-xs font-semibold transition flex items-center space-x-1 ring-1 ring-amber-400/50"
+        >
+          <span>🏆</span>
+          <span>Peringkat</span>
+        </button>
+
+        <button
+          onClick={() => { sounds.playClick(); onOpenAdmin && onOpenAdmin(); }}
+          title="Evergreen Control Center — Admin Dashboard [F1]"
+          className="bg-red-950/90 hover:bg-red-900 text-red-200 border border-red-500 px-2.5 py-1 rounded-md text-xs font-black transition flex items-center space-x-1 ring-2 ring-red-400 shadow-lg animate-pulse"
+        >
+          <span>⚙️</span>
+          <span>ADMIN</span>
         </button>
 
         <button

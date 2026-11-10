@@ -368,7 +368,7 @@ def test_save_checksum_and_integrity():
     assert save_res.status_code == 200
     save_data = save_res.json()
     assert "version" in save_data
-    assert save_data["version"] in ["2.0.0", "4.0.0"]
+    assert save_data["version"] in ["2.0.0", "4.0.0", "6.0.0"]
 
     # Save mutated state and check checksum returned
     post_res = client.post("/api/v1/game/save/1", json=save_data)
