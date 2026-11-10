@@ -23,6 +23,11 @@ import BlueprintDock from './components/BlueprintDock';
 import CharacterStudioModal from './components/CharacterStudioModal';
 import LandscapePainterDock from './components/LandscapePainterDock';
 import CivilizationDashboardModal from './components/CivilizationDashboardModal';
+import SkillsProgressionModal from './components/SkillsProgressionModal';
+import MountsStableModal from './components/MountsStableModal';
+import UndergroundMiningModal from './components/UndergroundMiningModal';
+import PortalsEventModal from './components/PortalsEventModal';
+import CollectionJournalModal from './components/CollectionJournalModal';
 import { sounds } from './game/SoundFx';
 import { multiplayer } from './game/MultiplayerManager';
 
@@ -64,6 +69,11 @@ export default function App() {
   const [characterStudioOpen, setCharacterStudioOpen] = useState(false);
   const [landscapePainterOpen, setLandscapePainterOpen] = useState(false);
   const [civDashboardOpen, setCivDashboardOpen] = useState(false);
+  const [skillsOpen, setSkillsOpen] = useState(false);
+  const [mountsOpen, setMountsOpen] = useState(false);
+  const [miningOpen, setMiningOpen] = useState(false);
+  const [portalsOpen, setPortalsOpen] = useState(false);
+  const [collectionsOpen, setCollectionsOpen] = useState(false);
   const [activeLandscapeBrush, setActiveLandscapeBrush] = useState('grass');
   const [landscapeBrushRadius, setLandscapeBrushRadius] = useState(1);
   const [currentZoneId, setCurrentZoneId] = useState('zone_farm');
@@ -209,7 +219,12 @@ export default function App() {
         sounds.playClick();
       } else if (e.code === 'KeyK') {
         e.preventDefault();
-        setCookingOpen((prev) => !prev);
+        setSkillsOpen((prev) => !prev);
+        sounds.playClick();
+      } else if (e.code === 'KeyR') {
+        e.preventDefault();
+        setMountsOpen((prev) => !prev);
+        sounds.playClick();
       } else if (e.code === 'KeyF') {
         e.preventDefault();
         setFishingOpen((prev) => !prev);
@@ -218,7 +233,16 @@ export default function App() {
         setTechTreeOpen((prev) => !prev);
       } else if (e.code === 'KeyM') {
         e.preventDefault();
-        setDungeonOpen((prev) => !prev);
+        setMiningOpen((prev) => !prev);
+        sounds.playClick();
+      } else if (e.code === 'KeyN') {
+        e.preventDefault();
+        setPortalsOpen((prev) => !prev);
+        sounds.playClick();
+      } else if (e.code === 'KeyY') {
+        e.preventDefault();
+        setCollectionsOpen((prev) => !prev);
+        sounds.playClick();
       } else if (e.code === 'KeyO') {
         e.preventDefault();
         setWorldMapOpen((prev) => !prev);
@@ -267,6 +291,11 @@ export default function App() {
         setCharacterStudioOpen(false);
         setLandscapePainterOpen(false);
         setCivDashboardOpen(false);
+        setSkillsOpen(false);
+        setMountsOpen(false);
+        setMiningOpen(false);
+        setPortalsOpen(false);
+        setCollectionsOpen(false);
         setBedOpen(false);
         setGuideOpen(false);
         setRosterOpen(false);
@@ -358,6 +387,11 @@ export default function App() {
         onOpenStoryline={() => setStorylineOpen(true)}
         onOpenCivilization={() => setCivDashboardOpen(true)}
         onOpenCharacterStudio={() => setCharacterStudioOpen(true)}
+        onOpenSkills={() => setSkillsOpen(true)}
+        onOpenMounts={() => setMountsOpen(true)}
+        onOpenMining={() => setMiningOpen(true)}
+        onOpenPortals={() => setPortalsOpen(true)}
+        onOpenCollections={() => setCollectionsOpen(true)}
         onToggleLandscapePainter={() => setLandscapePainterOpen((prev) => !prev)}
         isLandscapePainterActive={landscapePainterOpen}
         onOpenBed={() => setBedOpen(true)}
@@ -607,6 +641,47 @@ export default function App() {
       <CivilizationDashboardModal
         isOpen={civDashboardOpen}
         onClose={() => setCivDashboardOpen(false)}
+        gameState={gameState}
+        setGameState={setGameState}
+        showNotification={showNotification}
+      />
+
+      {/* V4 ULTIMATE EXPANSION MODALS */}
+      <SkillsProgressionModal
+        isOpen={skillsOpen}
+        onClose={() => setSkillsOpen(false)}
+        gameState={gameState}
+        setGameState={setGameState}
+        showNotification={showNotification}
+      />
+
+      <MountsStableModal
+        isOpen={mountsOpen}
+        onClose={() => setMountsOpen(false)}
+        gameState={gameState}
+        setGameState={setGameState}
+        showNotification={showNotification}
+      />
+
+      <UndergroundMiningModal
+        isOpen={miningOpen}
+        onClose={() => setMiningOpen(false)}
+        gameState={gameState}
+        setGameState={setGameState}
+        showNotification={showNotification}
+      />
+
+      <PortalsEventModal
+        isOpen={portalsOpen}
+        onClose={() => setPortalsOpen(false)}
+        gameState={gameState}
+        setGameState={setGameState}
+        showNotification={showNotification}
+      />
+
+      <CollectionJournalModal
+        isOpen={collectionsOpen}
+        onClose={() => setCollectionsOpen(false)}
         gameState={gameState}
         setGameState={setGameState}
         showNotification={showNotification}

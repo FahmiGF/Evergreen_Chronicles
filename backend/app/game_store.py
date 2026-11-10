@@ -5,6 +5,16 @@ import json
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel
 
+from app.progression_engine import ProgressionEngine
+from app.equipment_engine import EquipmentEngine
+from app.mounts_engine import MountsEngine
+from app.mining_engine import MiningEngine
+from app.fishing_engine import FishingEngine
+from app.pets_engine import PetsEngine
+from app.automation_engine import AutomationEngine
+from app.events_engine import EventsEngine
+from app.journal_engine import JournalEngine
+
 class Item(BaseModel):
     id: str
     name: str
@@ -65,7 +75,7 @@ class GameSave(BaseModel):
     slot_id: int
     save_name: str
     saved_at: str
-    version: Optional[str] = "2.0.0"
+    version: Optional[str] = "4.0.0"
     checksum: Optional[str] = None
     player: Dict[str, Any]
     world: Dict[str, Any]
@@ -105,6 +115,8 @@ ITEMS_DATABASE: Dict[str, Item] = {
     "seed_frostberry": Item(id="seed_frostberry", name="Benih Frostberry Salju", category="seed", description="Tanaman beri tahan beku dari Frostpeak. Tumbuh dalam 5 hari menghasilkan buah es segar.", buy_price=90, sell_price=45, stackable=True, icon_type="seed_magical", crop_growth_days=5, harvest_item_id="crop_frostberry"),
     "seed_sunburst_corn": Item(id="seed_sunburst_corn", name="Benih Jagung Surya", category="seed", description="Varietas jagung modern tahan kekeringan. Tumbuh dalam 5 hari dan panen berulang tiap 2 hari.", buy_price=110, sell_price=55, stackable=True, icon_type="seed_bag", crop_growth_days=5, harvest_item_id="crop_sunburst_corn"),
     "seed_steam_spud": Item(id="seed_steam_spud", name="Umbi Kentang Uap", category="seed", description="Hasil rekayasa teknologi pertanian Ironhaven. Menghasilkan energi uap alami saat direbus.", buy_price=75, sell_price=35, stackable=True, icon_type="seed_bag", crop_growth_days=4, harvest_item_id="crop_steam_spud"),
+    "seed_ghost_pumpkin": Item(id="seed_ghost_pumpkin", name="Benih Labu Hantu", category="seed", description="Benih labu musiman Halloween Madness. Tumbuh dalam 4 hari menghasilkan buah labu mistis bercahaya.", buy_price=120, sell_price=60, stackable=True, icon_type="seed_magical", crop_growth_days=4, harvest_item_id="crop_ghost_pumpkin"),
+    "crop_ghost_pumpkin": Item(id="crop_ghost_pumpkin", name="Labu Hantu Halloween", category="crop", description="Labu mistis bermata oranye terang untuk festival roh dan pai labu.", buy_price=300, sell_price=220, stackable=True, icon_type="crop_ghost_pumpkin", energy_restore=60),
 
     # Tree Saplings (8 Unique Tree Varieties)
     "sapling_oak": Item(id="sapling_oak", name="Sapling Pohon Ek Rimba", category="seed", description="Tumbuh menjadi Pohon Ek yang rindang dan menghasilkan Kayu Ek padat serta Acorn.", buy_price=80, sell_price=40, stackable=True, icon_type="sapling_oak"),
@@ -670,6 +682,17 @@ class EvergreenGameEngine:
             {"id": "tech_auto_harvest", "name": "Automaton Pemanen Otonom", "era": 5, "description": "Robot automaton bertenaga Aether yang memanen tanaman matang otomatis.", "cost_gold": 6000, "cost_aether": 200, "unlocked": False, "prerequisites": ["tech_electric_1"], "benefits": "Otomasi Total Pertanian"}
         ]
 
+        # Initialize V4 Ultimate Expansion Systems
+        ProgressionEngine.ensure_progression_state(initial_player)
+        EquipmentEngine.initialize_equipment(initial_player)
+        MountsEngine.initialize_mounts(initial_player)
+        MiningEngine.initialize_mining(initial_player)
+        FishingEngine.initialize_fishing(initial_player)
+        PetsEngine.initialize_pets(initial_player)
+        AutomationEngine.initialize_automation(initial_player)
+        EventsEngine.initialize_events(initial_world, initial_player)
+        JournalEngine.initialize_journal(initial_player)
+
         default_save = GameSave(
             slot_id=1,
             save_name="Petualangan Fahmi - Aetherwyn",
@@ -692,7 +715,7 @@ class EvergreenGameEngine:
             completed_npc_quests=[],
             storyline_unlocked=["chap_prologue", "chap_01"],
             shipping_bin=[],
-            version="2.0.0",
+            version="4.0.0",
             checksum="genesis_verified",
             civilization={
                 "current_era": "medieval",
@@ -810,6 +833,17 @@ class EvergreenGameEngine:
                         "sleepwear": {"top": "shirt_cotton_white", "bottom": "pants_soft_linen", "headwear": "none"}
                     }
                 }
+            # Ensure V4 Ultimate Expansion Systems in loaded save
+            ProgressionEngine.ensure_progression_state(save.player)
+            EquipmentEngine.initialize_equipment(save.player)
+            MountsEngine.initialize_mounts(save.player)
+            MiningEngine.initialize_mining(save.player)
+            FishingEngine.initialize_fishing(save.player)
+            PetsEngine.initialize_pets(save.player)
+            AutomationEngine.initialize_automation(save.player)
+            EventsEngine.initialize_events(save.world, save.player)
+            JournalEngine.initialize_journal(save.player)
+
         return save
 
     def update_character_profile(self, slot_id: int, profile: Dict[str, Any], wardrobe: Optional[Dict[str, Any]] = None) -> GameSave:
@@ -840,7 +874,7 @@ class EvergreenGameEngine:
             slot_id=slot_id,
             save_name=payload.get("save_name", f"Slot {slot_id}"),
             saved_at=datetime.datetime.now(datetime.timezone.utc).isoformat(),
-            version="2.0.0",
+            version="4.0.0",
             checksum=calc_checksum,
             player=payload["player"],
             world=payload["world"],

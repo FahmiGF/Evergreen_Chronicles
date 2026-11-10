@@ -276,9 +276,10 @@ export default function GameCanvas({
       animTimer += dt;
 
       // 1. UPDATE PLAYER & TRACTOR MOVEMENT
-      // Mounted on tractor = 235 px/s (75% faster than 135 px/s)
+      // Mounted on tractor = 235 px/s, Mounted on Mount = 215 px/s (normal = 135 px/s)
       const isMounted = isMountedRef.current;
-      const speed = isMounted ? 235 : 135;
+      const isRidingMount = gameState?.player?.mounts_data?.is_mounted;
+      const speed = isMounted ? 235 : (isRidingMount ? 215 : 135);
       let dx = 0;
       let dy = 0;
 
@@ -2361,6 +2362,49 @@ export default function GameCanvas({
     ctx.beginPath();
     ctx.ellipse(px + 20, py + 36, 12, 6, 0, 0, Math.PI * 2);
     ctx.fill();
+
+    // Mount (Tunggangan) under player if mounted
+    const mountData = gameState?.player?.mounts_data;
+    if (mountData?.is_mounted) {
+      const activeMount = mountData.active_mount_id || 'horse';
+      const mColors = {
+        horse: '#854d0e',
+        pony: '#a16207',
+        deer: '#b45309',
+        giant_rabbit: '#f1f5f9',
+        alpaca: '#fef08a',
+        wolf_mount: '#64748b',
+        crystal_fox: '#38bdf8',
+        unicorn: '#f472b6',
+        griffin: '#f59e0b',
+        dragon: '#ef4444'
+      };
+      const mColor = mColors[activeMount] || '#854d0e';
+
+      ctx.save();
+      ctx.fillStyle = mColor;
+      ctx.beginPath();
+      ctx.ellipse(px + 20, py + 28, 16, 10, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      const hx = dir === 'right' ? px + 32 : dir === 'left' ? px + 8 : px + 20;
+      const hy = dir === 'up' ? py + 18 : py + 26;
+      ctx.beginPath();
+      ctx.arc(hx, hy, 7, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#451a03';
+      ctx.fillRect(px + 15, py + 24, 10, 6);
+
+      if (['crystal_fox', 'unicorn', 'dragon'].includes(activeMount)) {
+        ctx.strokeStyle = activeMount === 'crystal_fox' ? '#38bdf8' : activeMount === 'unicorn' ? '#f472b6' : '#f87171';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.ellipse(px + 20, py + 28, 17, 11, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
 
     // 2. Wings (Behind body)
     if (charProfile.appendages?.wings && charProfile.appendages.wings !== 'none') {

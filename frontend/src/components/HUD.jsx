@@ -26,6 +26,11 @@ export default function HUD({
   onOpenAffection,
   onOpenCivilization,
   onOpenCharacterStudio,
+  onOpenSkills,
+  onOpenMounts,
+  onOpenMining,
+  onOpenPortals,
+  onOpenCollections,
   onToggleLandscapePainter,
   isLandscapePainterActive = false,
   onReturnToMenu,
@@ -303,6 +308,52 @@ export default function HUD({
         >
           <span>🖌️</span>
           <span>Lanskap [L]</span>
+        </button>
+
+        {/* V4 ULTIMATE EXPANSION QUICK BUTTONS */}
+        <button
+          onClick={() => { sounds.playClick(); onOpenSkills && onOpenSkills(); }}
+          title="Pusat Progresi & 12 Keahlian [K]"
+          className="bg-amber-900/90 hover:bg-amber-800 text-amber-200 border border-amber-500 px-2 py-1 rounded-md text-xs font-semibold transition flex items-center space-x-1 ring-1 ring-amber-400/40"
+        >
+          <span>⭐</span>
+          <span>Skill [K]</span>
+        </button>
+
+        <button
+          onClick={() => { sounds.playClick(); onOpenMounts && onOpenMounts(); }}
+          title="Kandang Satwa & Tunggangan [R]"
+          className="bg-amber-950/90 hover:bg-amber-900 text-amber-200 border border-amber-600 px-2 py-1 rounded-md text-xs font-semibold transition flex items-center space-x-1 ring-1 ring-amber-400/40"
+        >
+          <span>🐎</span>
+          <span>Mount [R]</span>
+        </button>
+
+        <button
+          onClick={() => { sounds.playClick(); onOpenMining && onOpenMining(); }}
+          title="Goa Tambang 60 Lantai & Mesin [M]"
+          className="bg-stone-800 hover:bg-stone-700 text-stone-200 border border-stone-500 px-2 py-1 rounded-md text-xs font-semibold transition flex items-center space-x-1"
+        >
+          <span>⛏️</span>
+          <span>Tambang [M]</span>
+        </button>
+
+        <button
+          onClick={() => { sounds.playClick(); onOpenPortals && onOpenPortals(); }}
+          title="Portal Dimensi & Halloween Event [X]"
+          className="bg-purple-950/90 hover:bg-purple-900 text-purple-200 border border-purple-500 px-2 py-1 rounded-md text-xs font-semibold transition flex items-center space-x-1 ring-1 ring-purple-400/50"
+        >
+          <span>🌀</span>
+          <span>Portal & Event [X]</span>
+        </button>
+
+        <button
+          onClick={() => { sounds.playClick(); onOpenCollections && onOpenCollections(); }}
+          title="Buku Ensiklopedia & Guild [Z]"
+          className="bg-emerald-950/90 hover:bg-emerald-900 text-emerald-200 border border-emerald-500 px-2 py-1 rounded-md text-xs font-semibold transition flex items-center space-x-1 ring-1 ring-emerald-400/40"
+        >
+          <span>📖</span>
+          <span>Koleksi [Z]</span>
         </button>
 
         <button

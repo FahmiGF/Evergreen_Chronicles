@@ -35,6 +35,15 @@ from app.civilization_engine import (
     TOWN_BUSINESSES,
     LIVING_NPCS_BRAIN
 )
+from app.progression_engine import ProgressionEngine, SKILLS_CATALOG, MILESTONES, SKILL_TREES_DATA
+from app.equipment_engine import EquipmentEngine, TOOL_TIERS, TOOL_TYPES, ENCHANTMENTS_CATALOG
+from app.mounts_engine import MountsEngine, MOUNTS_CATALOG, STABLE_TIERS
+from app.mining_engine import MiningEngine, MINING_ZONES, MINERALS_CATALOG, MACHINERY_RECIPES
+from app.fishing_engine import FishingEngine, WATER_ZONES, BOATS_CATALOG, FISH_SPECIES
+from app.pets_engine import PetsEngine, PETS_CATALOG, RANCH_FACILITIES
+from app.automation_engine import AutomationEngine, BUILDINGS_CATALOG, PRODUCTION_RECIPES
+from app.events_engine import EventsEngine, PORTAL_DIMENSIONS, HALLOWEEN_SHOP_ITEMS
+from app.journal_engine import JournalEngine, COLLECTIONS_CATALOG, ACHIEVEMENTS_CATALOG, GUILDS_CATALOG
 
 app = FastAPI(
     title="Evergreen Chronicles Online Engine & Multiplayer Hub",
@@ -1339,6 +1348,417 @@ async def websocket_world_endpoint(
         await world_hub.disconnect(client_id)
     except Exception:
         await world_hub.disconnect(client_id)
+
+# =========================================================================
+# ==================== V4 ULTIMATE EXPANSION ENDPOINTS ====================
+# =========================================================================
+
+# --- 1. PLAYER PROGRESSION & 12 SKILLS ---
+@app.get("/api/v1/game/skills")
+def get_player_skills():
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save file not found")
+    ProgressionEngine.ensure_progression_state(save.player)
+    return {
+        "global_level": save.player.get("global_level", 1),
+        "total_skill_levels": save.player.get("total_skill_levels", 12),
+        "skills": save.player.get("skills", {}),
+        "catalog": SKILLS_CATALOG,
+        "milestones": MILESTONES,
+        "trees": SKILL_TREES_DATA,
+        "prestige_badges": save.player.get("prestige_badges", [])
+    }
+
+@app.post("/api/v1/game/skills/xp")
+def add_player_skill_xp(payload: Dict[str, Any] = Body(...)):
+    skill_id = payload.get("skill_id")
+    amount = payload.get("amount", 25)
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    result = ProgressionEngine.add_skill_xp(save.player, skill_id, amount)
+    if "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+    return result
+
+@app.post("/api/v1/game/skills/perk")
+def unlock_player_skill_perk(payload: Dict[str, Any] = Body(...)):
+    skill_id = payload.get("skill_id")
+    perk_id = payload.get("perk_id")
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    result = ProgressionEngine.unlock_skill_perk(save.player, skill_id, perk_id)
+    if not result.get("success", False):
+        raise HTTPException(status_code=400, detail=result.get("error", "Gagal membuka perk."))
+    return result
+
+@app.post("/api/v1/game/skills/prestige")
+def activate_player_skill_prestige(payload: Dict[str, Any] = Body(...)):
+    skill_id = payload.get("skill_id")
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    result = ProgressionEngine.activate_prestige(save.player, skill_id)
+    if not result.get("success", False):
+        raise HTTPException(status_code=400, detail=result.get("error", "Gagal aktivasi prestige."))
+    return result
+
+# --- 2. TOOLS & EQUIPMENT SYSTEM ---
+@app.get("/api/v1/game/equipment")
+def get_player_equipment():
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    EquipmentEngine.initialize_equipment(save.player)
+    return {
+        "equipment": save.player.get("equipment", {}),
+        "tool_tiers": TOOL_TIERS,
+        "tool_types": TOOL_TYPES,
+        "enchantments": ENCHANTMENTS_CATALOG
+    }
+
+@app.post("/api/v1/game/equipment/repair")
+def repair_player_tool(payload: Dict[str, Any] = Body(...)):
+    tool_type = payload.get("tool_type")
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    result = EquipmentEngine.repair_tool(save.player, tool_type)
+    if not result.get("success", False):
+        raise HTTPException(status_code=400, detail=result.get("error", "Perbaikan alat gagal."))
+    return result
+
+@app.post("/api/v1/game/equipment/upgrade")
+def upgrade_player_tool(payload: Dict[str, Any] = Body(...)):
+    tool_type = payload.get("tool_type")
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    result = EquipmentEngine.upgrade_tool_tier(save.player, tool_type)
+    if not result.get("success", False):
+        raise HTTPException(status_code=400, detail=result.get("error", "Upgrade alat gagal."))
+    return result
+
+@app.post("/api/v1/game/equipment/enchant")
+def enchant_player_tool(payload: Dict[str, Any] = Body(...)):
+    tool_type = payload.get("tool_type")
+    enchantment_id = payload.get("enchantment_id")
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    result = EquipmentEngine.apply_enchantment(save.player, tool_type, enchantment_id)
+    if not result.get("success", False):
+        raise HTTPException(status_code=400, detail=result.get("error", "Enchantment alat gagal."))
+    return result
+
+# --- 3. MOUNT & RIDING SYSTEM ---
+@app.get("/api/v1/game/mounts")
+def get_player_mounts():
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    MountsEngine.initialize_mounts(save.player)
+    return {
+        "mounts_data": save.player.get("mounts_data", {}),
+        "catalog": MOUNTS_CATALOG,
+        "stables": STABLE_TIERS
+    }
+
+@app.post("/api/v1/game/mounts/toggle")
+def toggle_player_mount(payload: Dict[str, Any] = Body(default={})):
+    mount_id = payload.get("mount_id")
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    result = MountsEngine.toggle_mount(save.player, mount_id)
+    if not result.get("success", False):
+        raise HTTPException(status_code=400, detail=result.get("error", "Gagal menunggangi mount."))
+    return result
+
+@app.post("/api/v1/game/mounts/interact")
+def interact_player_mount(payload: Dict[str, Any] = Body(...)):
+    mount_id = payload.get("mount_id")
+    action = payload.get("action", "feed")
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    result = MountsEngine.interact_mount(save.player, mount_id, action)
+    if not result.get("success", False):
+        raise HTTPException(status_code=400, detail=result.get("error", "Interaksi mount gagal."))
+    return result
+
+@app.post("/api/v1/game/mounts/unlock")
+def unlock_player_mount(payload: Dict[str, Any] = Body(...)):
+    mount_id = payload.get("mount_id")
+    custom_name = payload.get("custom_name")
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    result = MountsEngine.unlock_mount(save.player, mount_id, custom_name)
+    if not result.get("success", False):
+        raise HTTPException(status_code=400, detail=result.get("error", "Gagal membuka mount."))
+    return result
+
+@app.post("/api/v1/game/mounts/upgrade-stable")
+def upgrade_player_stable():
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    result = MountsEngine.upgrade_stable(save.player)
+    if not result.get("success", False):
+        raise HTTPException(status_code=400, detail=result.get("error", "Renovasi kandang gagal."))
+    return result
+
+# --- 4. UNDERGROUND MINING & MACHINERY ---
+@app.get("/api/v1/game/mining")
+def get_player_mining():
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    MiningEngine.initialize_mining(save.player)
+    return {
+        "mining_data": save.player.get("mining_data", {}),
+        "zones": MINING_ZONES,
+        "minerals_catalog": MINERALS_CATALOG,
+        "machinery_recipes": MACHINERY_RECIPES
+    }
+
+@app.post("/api/v1/game/mining/excavate")
+def excavate_mining_floor(payload: Dict[str, Any] = Body(...)):
+    floor = payload.get("floor", 1)
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    result = MiningEngine.excavate_floor(save.player, floor)
+    if not result.get("success", False):
+        raise HTTPException(status_code=400, detail=result.get("error", "Ekskavasi tambang gagal."))
+    return result
+
+@app.post("/api/v1/game/mining/machine")
+def process_mining_machine(payload: Dict[str, Any] = Body(...)):
+    recipe_name = payload.get("recipe_name")
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    result = MiningEngine.process_machine(save.player, recipe_name)
+    if not result.get("success", False):
+        raise HTTPException(status_code=400, detail=result.get("error", "Pengolahan mesin gagal."))
+    return result
+
+# --- 5. FISHING, OCEAN & BOATS ---
+@app.get("/api/v1/game/ocean-fishing")
+def get_ocean_fishing():
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    FishingEngine.initialize_fishing(save.player)
+    return {
+        "fishing_data": save.player.get("fishing_data", {}),
+        "water_zones": WATER_ZONES,
+        "boats_catalog": BOATS_CATALOG,
+        "fish_species": FISH_SPECIES
+    }
+
+@app.post("/api/v1/game/ocean-fishing/cast")
+def cast_fishing_line(payload: Dict[str, Any] = Body(...)):
+    zone_id = payload.get("zone_id", "zone_lake")
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    result = FishingEngine.cast_line(save.player, zone_id)
+    return result
+
+@app.post("/api/v1/game/ocean-fishing/boat")
+def purchase_exploration_boat(payload: Dict[str, Any] = Body(...)):
+    boat_id = payload.get("boat_id")
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    result = FishingEngine.purchase_boat(save.player, boat_id)
+    if not result.get("success", False):
+        raise HTTPException(status_code=400, detail=result.get("error", "Pembelian perahu gagal."))
+    return result
+
+# --- 6. PETS, COMPANIONS & RANCH ---
+@app.get("/api/v1/game/pets-ranch")
+def get_pets_ranch():
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    PetsEngine.initialize_pets(save.player)
+    return {
+        "pets_data": save.player.get("pets_data", {}),
+        "pets_catalog": PETS_CATALOG,
+        "ranch_facilities": RANCH_FACILITIES
+    }
+
+@app.post("/api/v1/game/pets-ranch/action")
+def pet_companion_action(payload: Dict[str, Any] = Body(...)):
+    pet_id = payload.get("pet_id")
+    action = payload.get("action", "pet")
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    result = PetsEngine.pet_action(save.player, pet_id, action)
+    if not result.get("success", False):
+        raise HTTPException(status_code=400, detail=result.get("error", "Aksi hewan gagal."))
+    return result
+
+@app.post("/api/v1/game/pets-ranch/harvest")
+def harvest_ranch_products():
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    result = PetsEngine.harvest_ranch(save.player)
+    return result
+
+# --- 7. AUTOMATION & FACTORY EXPANSION ---
+@app.get("/api/v1/game/automation")
+def get_automation_state():
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    AutomationEngine.initialize_automation(save.player)
+    return {
+        "automation_data": save.player.get("automation_data", {}),
+        "buildings_catalog": BUILDINGS_CATALOG,
+        "recipes": PRODUCTION_RECIPES
+    }
+
+@app.post("/api/v1/game/automation/build")
+def build_factory_structure(payload: Dict[str, Any] = Body(...)):
+    building_id = payload.get("building_id")
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    result = AutomationEngine.construct_building(save.player, building_id)
+    if not result.get("success", False):
+        raise HTTPException(status_code=400, detail=result.get("error", "Pembangunan gagal."))
+    return result
+
+@app.post("/api/v1/game/automation/queue")
+def queue_factory_production(payload: Dict[str, Any] = Body(...)):
+    recipe_name = payload.get("recipe_name")
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    result = AutomationEngine.queue_production(save.player, recipe_name)
+    if not result.get("success", False):
+        raise HTTPException(status_code=400, detail=result.get("error", "Antrean pabrik gagal."))
+    return result
+
+@app.post("/api/v1/game/automation/collect")
+def collect_factory_production(payload: Dict[str, Any] = Body(...)):
+    queue_id = payload.get("queue_id")
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    result = AutomationEngine.collect_production(save.player, queue_id)
+    if not result.get("success", False):
+        raise HTTPException(status_code=400, detail=result.get("error", "Pengambilan produk gagal."))
+    return result
+
+# --- 8. TIMED PORTALS & SEASONAL EVENTS (HALLOWEEN MADNESS) ---
+@app.get("/api/v1/game/portals-events")
+def get_portals_events():
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    EventsEngine.initialize_events(save.world, save.player)
+    return {
+        "active_portals": save.world.get("active_portals", []),
+        "portal_catalog": PORTAL_DIMENSIONS,
+        "seasonal_events": save.world.get("seasonal_events", {}),
+        "event_inventory": save.player.get("event_inventory", {}),
+        "halloween_shop": HALLOWEEN_SHOP_ITEMS
+    }
+
+@app.post("/api/v1/game/portals-events/enter")
+def enter_dimensional_portal(payload: Dict[str, Any] = Body(...)):
+    portal_id = payload.get("portal_id")
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    result = EventsEngine.enter_portal(save.player, save.world, portal_id)
+    if not result.get("success", False):
+        raise HTTPException(status_code=400, detail=result.get("error", "Gagal menembus portal."))
+    return result
+
+@app.post("/api/v1/game/portals-events/trick-or-treat")
+def trick_or_treat_npc(payload: Dict[str, Any] = Body(...)):
+    npc_name = payload.get("npc_name", "Elara")
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    result = EventsEngine.trick_or_treat(save.player, save.world, npc_name)
+    if not result.get("success", False):
+        raise HTTPException(status_code=400, detail=result.get("error", "Trick or treat gagal."))
+    return result
+
+@app.post("/api/v1/game/portals-events/shop")
+def purchase_halloween_shop_item(payload: Dict[str, Any] = Body(...)):
+    item_id = payload.get("item_id")
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    result = EventsEngine.purchase_halloween_item(save.player, save.world, item_id)
+    if not result.get("success", False):
+        raise HTTPException(status_code=400, detail=result.get("error", "Pembelian gagal."))
+    return result
+
+# --- 9. COLLECTION JOURNAL, ACHIEVEMENTS & GUILDS ---
+@app.get("/api/v1/game/collections")
+def get_collections_summary():
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    JournalEngine.initialize_journal(save.player)
+    summary = JournalEngine.get_collection_summary(save.player)
+    jdata = save.player.get("journal_data", {})
+    return {
+        "summary": summary,
+        "achievements_catalog": ACHIEVEMENTS_CATALOG,
+        "completed_achievements": jdata.get("completed_achievements", []),
+        "claimed_achievements": jdata.get("claimed_achievements", [])
+    }
+
+@app.post("/api/v1/game/achievements/claim")
+def claim_journal_achievement(payload: Dict[str, Any] = Body(...)):
+    achievement_id = payload.get("achievement_id")
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    result = JournalEngine.claim_achievement(save.player, achievement_id)
+    if not result.get("success", False):
+        raise HTTPException(status_code=400, detail=result.get("error", "Klaim achievement gagal."))
+    return result
+
+@app.get("/api/v1/game/guilds")
+def get_guilds():
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    JournalEngine.initialize_journal(save.player)
+    jdata = save.player.get("journal_data", {})
+    return {
+        "catalog": GUILDS_CATALOG,
+        "active_guild_id": jdata.get("active_guild_id", "guild_farmer"),
+        "guild_rank": jdata.get("guild_rank", "Adept"),
+        "guild_reputation": jdata.get("guild_reputation", 280)
+    }
+
+@app.post("/api/v1/game/guilds/join")
+def join_player_guild(payload: Dict[str, Any] = Body(...)):
+    guild_id = payload.get("guild_id")
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    result = JournalEngine.join_guild(save.player, guild_id)
+    if not result.get("success", False):
+        raise HTTPException(status_code=400, detail=result.get("error", "Gagal bergabung ke guild."))
+    return result
 
 # ==================== STATIC FRONTEND SERVING ====================
 frontend_dist = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
