@@ -1,102 +1,155 @@
-# 🌲 EVERGREEN CHRONICLES ONLINE
+# 🌲 EVERGREEN CHRONICLES ONLINE (v1.0 — v4.0 Ultimate Expansion)
 
-> **A 2D Top-Down Multiplayer RPG & Farming Simulation Game**  
-> *Medieval × Modern Fantasy — Real-Time Online Co-op, A\* Living NPCs & Civilization Evolution.*
+> **Cozy Fantasy Life-Simulation Sandbox, Mechanized Farming, Living Civilization & Endless Exploration**  
+> *Author: FahmiGF — Medieval to Modern Fantasy Architecture*
 
----
-
-## 🌟 Fitur Baru & Peningkatan Terkini
-
-### 👥 1. Real-Time Online Multiplayer (WebSockets)
-- **Sinkronisasi Lahan Bersama**: Perubahan petak tanah (mencangkul, menyiram, menanam benih, memanen sayuran, memecah batu) langsung disinkronkan ke seluruh pemain online secara *real-time*.
-- **Interpolasi Gerakan Halus (Linear Lerp)**: Karakter pemain lain bergerak pada 60 FPS tanpa jeda (*zero jitter/lag*).
-- **Sistem Obrolan Langsung (Online Chat)**: Tekan `[Enter]` untuk membuka kolom chat. Pesan obrolan muncul di kotak obrolan global dan sebagai **balon percakapan kartun (*speech bubble*)** di atas kepala karakter pada layar game!
-- **Daftar Pemain Online (*Roster Drawer*)**: Pantau jumlah pemain yang sedang aktif dan latensi ping (*sub-5ms ping response*).
-
-### 🤖 2. Living NPCs dengan A\* Pathfinding
-- Warga desa (**Elara**, **Rowan**, **Nessa**, **Mira**) kini benar-benar hidup dan berjalan mengelilingi desa sesuai jadwal mereka!
-- **Algoritma A\* Pathfinding**: Menghitung jalur terpendek dan secara cerdas menghindari pagar, pondok, kolam air, batu besar, serta tunggul kayu.
-- **Interaksi Dekat**: Saat Anda mendekati warga (dalam jarak 2 petak), muncul ikon `[Klik / E untuk Bicara]` untuk berdialog, memberikan hadiah (*gift giving*), atau meminta tips bercocok tanam.
-
-### 🎣 3. Kolam Pemancingan Aetherwyn (Fishing Mini-Game)
-- Berdiri di tepi kolam air dan tekan `[F]` atau klik kolam untuk melempar kail.
-- Mini-game reel interaktif: Tahan tarikan reel di zona hijau tangkapan untuk memancing **Ikan Mas Mentari (Sunfish)**, **Gurame Kristal Aether**, hingga **Forel Rembulan (Moon Trout)**!
-
-### 🍲 4. Dapur Memasak & Perapian Rumah (Cooking System)
-- Olah hasil panen menjadi hidangan lezat berkhasiat tinggi:
-  - **Sup Hangat Parsnip**: Memulihkan +50 Stamina & +30 HP.
-  - **Kentang Panggang Mentega**: Memulihkan +65 Stamina & +45 HP.
-  - **Kue Pai Stroberi**: Memulihkan +90 Stamina & +60 HP.
-  - **Elixir Bintang Moonberry**: Memulihkan 100% Stamina (120) & +100 HP.
-
-### 🐑 5. Peternakan Hewan (Animal Husbandry)
-- Peternakan berpagar berisi **Domba Aether (Aether Sheep)** dan **Ayam Berbulu Emas (Golden Chickens)**.
-- Klik hewan untuk membelai mereka: menghasilkan **Wol Lembut (+80G)** dan **Telur Emas (+50G)** dengan animasi hati cinta!
-
-### 🌧️ 6. Efek Cuaca Hujan & Pencahayaan Dinamis
-- Saat cuaca `Rainy`, butiran air hujan jatuh secara diagonal di atas kanvas dengan riak air halus.
-- Siklus pencahayaan otomatis: Siang cerah, Senja jingga hangat (17:00–19:59), dan Malam gelap bertabur kunang-kunang (*fireflies*) dengan lentera melingkar di sekeliling karakter.
+[![Build Status](https://img.shields.io/badge/Vite%20Build-Passed%20(0%20errors)-emerald.svg)]()
+[![Automated Tests](https://img.shields.io/badge/Pytest%20API%20Suite-43%2F43%20Passed-blue.svg)]()
+[![Game Save](https://img.shields.io/badge/Persistence-Checksum%20v4.0.0-amber.svg)]()
+[![License](https://img.shields.io/badge/License-MIT-purple.svg)]()
 
 ---
 
-## 🎮 Kontrol Permainan
+## 🗺️ Roadmap & Version History
 
-| Tombol | Aksi |
+```mermaid
+flowchart LR
+    V1["v1.0 Core & Mechanization\n• 3D Isometric View\n• CAD Blueprint Mode\n• Drivable Tractor\n• 8 Tree Varieties"] --> V2["v2.0 World & Studio\n• Landscape Editor\n• Character Studio (10 Races)\n• Layered Wardrobe\n• 8 Terrain Brushes"]
+    V2 --> V3["v3.0 Living Civilization\n• 7 Simulation Layers\n• Dynamic Market Pricing\n• Autonomous NPC Brains\n• 4 Eras Evolution"]
+    V3 --> V4["v4.0 Ultimate Expansion\n• 12 Skills & Perk Trees\n• 10 Tool Tiers\n• 10 Mounts & Stables\n• Mining 60 Floors\n• Ocean Fishing & Boats\n• 13 Factory Buildings\n• 8 Timed Portals\n• Halloween Madness\n• Collection Journal & Guilds"]
+```
+
+---
+
+## 🌟 Version Highlights Breakdown
+
+### 🚜 Version 1.0.0 — Core Simulation & Mechanized Farming
+- **Multi-Perspective Rendering**: Seamless switching between **2D Classic Top-Down (`[V]`)**, **3D Isometric Depth Projection (`[V]`)**, and **CAD Blueprint Mode (`[B]`)**.
+- **Mechanized Tractor System**: Drivable agricultural tractor with 3 specialized modular implements (**Tiller**, **Sprayer**, **Mower**), functional horn (`[H]`), exhaust particle physics, and 3x swath area clearing.
+- **8 Distinct Tree Varieties**: Oak, Pine, Birch, Willow, Lumina, Cherry, Ironbark, and Golden Apple with individual growth cycles, wood types, and seasonal drops.
+- **Dynamic Time & Weather**: 24-hour day/night lighting cycles, real-time rain/storm particle effects, and 4 in-game seasons.
+
+### 🎨 Version 2.0.0 — World Customization & Character Studio
+- **Terrain Landscape Painter (`[L]`)**: In-game real-time terrain brush dock (Grass, Dirt, Water, Stone, Sand, Cobblestone, Wood Flooring, Flower Meadow) with variable radius (1x1 to 3x3).
+- **Comprehensive Character Studio (`[P]`)**: 
+  - **10 Playable Races**: Human, Elf, Dwarf, Beastkin, Celestian, Shadowkin, Dragonkin, Dryad, Automaton, Merfolk with distinct passive kingdom traits.
+  - **Full Customization**: 8 facial shapes, 12 skin tones, 16 hair styles with highlights, facial markings, and body build types.
+  - **Layered Wardrobe & Outfits**: Headwear, tops, bottoms, footwear, back accessories, and 4 one-click outfit presets (*Work*, *Adventure*, *Formal*, *Sleepwear*).
+
+### 🏛️ Version 3.0.0 — Living Civilization Engine & Server Architecture
+- **7-Layer Civilization Simulation**:
+  1. *Population*: Happiness, housing capacity, migration rate.
+  2. *Economy*: Liquidity, town business revenues, municipal tax reserves.
+  3. *Infrastructure*: Road quality, pressurized irrigation coverage, electrification.
+  4. *Social*: Community cohesion, safety index, town mutual aid.
+  5. *Governance*: Prosperity score, era progression policies.
+  6. *Environment*: Soil fertility, ancient forest conservation, air quality.
+  7. *Culture*: Heritage archival, seasonal festival readiness.
+- **Dynamic Market Economy**: Real-time supply-and-demand price calculations with elastic price ceilings and floors across 8 core commodities.
+- **Autonomous NPC Brains**: 24-hour activity routines, multi-dimensional relationships (Trust, Respect, Friendship, Familiarity, Cooperation), bounded episodic memory banks, and procedural shortage quest generation.
+- **Cryptographic Save Persistence**: Version 2.0.0+ engine with SHA-256 integrity checksums, two-stage atomic file writing, and auto-repair.
+
+### 🌌 Version 4.0.0 — Ultimate Expansion Update
+- **12 Player Skills & Branching Perk Trees (`[K]`)**:
+  - Skills: *Farming*, *Mining*, *Fishing*, *Foraging*, *Crafting*, *Combat*, *Cooking*, *Social*, *Exploration*, *Animal Care*, *Building*, *Magic*.
+  - Milestones (Lv 1–100): *Beginner*, *Apprentice*, *Skilled*, *Expert*, *Master*, *Grandmaster*, *Legendary*.
+  - 3 branches per skill with 5 perks each (e.g. *Crop Mastery*, *Land Mastery*, *Nature Harmony*).
+  - Prestige system for Level 50+ mastery skills with exclusive badges and titles.
+- **10 Tool Tiers & Equipment Progression**:
+  - Tiers: *Wooden* → *Copper* → *Iron* → *Silver* → *Gold* → *Platinum* → *Mythril* → *Crystal* → *Ancient* → *Celestial*.
+  - Durability decay, blacksmith repairs, and socketable enchantments (*Fortune*, *Swift Strike*, *Auto-Smelt*, *Multi-Tile*, *Radiance*).
+- **10 Mounts & Stables System (`[R]`)**:
+  - Mounts: Horse, Pony, Deer, Giant Rabbit, Alpaca, Snow Wolf, Crystal Fox, Dawn Unicorn, Sky Griffin, Ancient Dragon (+40% to +175% move speed).
+  - Bonding interactions: Feed, Groom, Play, Train with happiness and stamina bars.
+  - Stable upgrades across 6 tiers (Small Stable to Celestial Sanctuary).
+- **Goa Tambang 60 Lantai & Mesin Pengolah (`[M]`)**:
+  - 10 underground zones (Abandoned Quarry to Celestial Mine) with elevator checkpoints every 5 floors.
+  - Machinery: Blast Smelter (ingots), Ore Crusher (geodes), Gem Polisher (faceted royal gems), and automated minecart routing.
+- **Perikanan Samudra & Armada Kapal**:
+  - 7 aquatic zones: *Peaceful Lake*, *River Valley*, *Coastal Beach*, *Coral Reef*, *Deep Ocean*, *Sunken Kingdom*, *Frozen Sea*.
+  - 5 boat tiers (Wooden Raft to Arcane Skiff) and Village Aquarium specimen length records.
+- **Satwa Pendamping & Peternakan Hewan**:
+  - 10 Companion pets with active passive traits (*Treasure Sniffer*, *Cozy Purr*, etc.).
+  - Ranch facilities: Chicken Coop, Cow Barn, Alpaca Sanctuary, and Apiary with daily harvests.
+- **13 Fasilitas Produksi & Otomasi Pabrik**:
+  - Buildings: Greenhouse, Bakery, Dairy, Juice House, Textile Workshop, Carpenter, Blacksmith, Alchemy Lab, Gem Workshop, Automated Factory, Research Center, Trading Post, Warehouse.
+  - Automated irrigation and asynchronous batch processing queues.
+- **8 Portal Dimensi & Event Halloween Madness (`[N]` / `[X]`)**:
+  - 8 Timed Portals with live countdown clocks and dimensional relic drops.
+  - Halloween Madness: Spooky village decor, Ghost Pumpkin farming, NPC Trick-or-Treating, and Spooky Vanity Shop.
+- **Buku Koleksi, Pencapaian & Guild (`[Y]`)**:
+  - Master collection encyclopedia tracking completion % across crops, minerals, and fish.
+  - 25+ structured achievements with gold claims.
+  - 7 Player Guilds with passive profession perks.
+
+---
+
+## 🎮 Keyboard Controls & Hotkeys
+
+| Key | Action |
 | :--- | :--- |
-| **W, A, S, D** / Panah | Menggerakkan karakter petani ke 4 arah |
-| **Spasi / Klik Kiri** | Menggunakan alat, menanam, memanen, membelai hewan |
-| **Enter** | Membuka kolom obrolan online multiplayer (*Online Chat*) |
-| **1 — 9, 0** | Memilih slot akses cepat (*Quickbar Hotbar*) |
-| **E** | Membuka / menutup Tas Ransel 24 Slot (*Backpack*) |
-| **C** | Membuka Meja Kerajinan (*Crafting Bench*) |
-| **K** | Membuka Dapur Memasak (*Cooking Kitchen*) |
-| **F** | Memancing di Kolam Ikan (*Fishing Pond*) |
-| **T** | Membuka Pohon Riset Teknologi & Era (*Tech Tree*) |
-| **M** | Membuka Gua Tambang & Monster (*Forgotten Mines Dungeon*) |
-| **Z** | Tidur di Kasur & Mulai Hari Baru (*Sleep & Advance Day*) |
-| **H / ?** | Menampilkan Buku Panduan Kontrol Lengkap |
+| **`W, A, S, D`** / **Arrows** | Gerak Karakter / Kemudi Traktor / Satwa Tunggangan |
+| **`[V]`** | Ganti Tampilan Kamera: **2D Top-Down** ⟷ **3D Isometrik** |
+| **`[B]`** | Mode Arsitektur Cetak Biru CAD |
+| **`[K]`** | Buka Pusat Progresi & 12 Keahlian (Skills) |
+| **`[R]`** | Buka Kandang Satwa & Tunggangi Mount |
+| **`[M]`** | Buka Goa Tambang 60 Lantai & Mesin Pengolah |
+| **`[N]`** / **`[X]`** | Buka Portal Dimensi & Event Musiman Halloween |
+| **`[Y]`** | Buka Ensiklopedia Koleksi, Pencapaian & Guild |
+| **`[C]`** | Buka Dashboard Pusat Peradaban & Pasar Dinamis |
+| **`[P]`** | Buka Studio Karakter & Lemari Busana |
+| **`[L]`** | Aktifkan Palet Kuas Lanskap & Terrain |
+| **`[E]`** | Buka Inventaris Tas Pemain |
+| **`[F]`** | Melempar Joran Pancing di Perairan |
+| **`[Q]`** | Buka Log Buku Tugas Warga |
+| **`[U]`** | Buka Tingkat Kasih Penduduk Desa |
+| **`[J]`** | Buka Alur Cerita 7 Bab Sinematik |
+| **`[H]`** | Membunyikan Klakson Traktor (*Honk!*) |
+| **`[1, 2, 3]`** | Ganti Implemen Traktor: Bajak Tanah / Semprot Air / Babat Rumput |
+| **`[ESC]`** | Menutup jendela modal aktif |
 
 ---
 
-## ⚡ Hasil Stress Testing & Performa
+## 🚀 Instalasi & Menjalankan Game
 
-Diuji menggunakan skrip otomatis `backend/tests/stress_test.py` dengan 30 simulasi bot pemain WebSocket simultan:
-
-```text
-=================== TEST RESULTS ===================
-✅ Successful Connections : 30 / 30 (100.0%)
-❌ Failed Connections     : 0
-📨 Total Packets Sent     : 1620
-📬 Total Packets Received : 780
-⚡ Average Ping Latency   : 5.00 ms
-⏱️ Total Execution Time   : 10.91 seconds
-📈 Real-time Throughput   : 219.9 packets/second
-====================================================
-🎉 STRESS TEST PASSED: Zero drop rate, high throughput, sub-15ms latency!
-```
-
----
-
-## 🚀 Cara Menjalankan
-
-### Cara 1: 1-Klik Launcher (Windows)
-Klik ganda file:
-```cmd
-Buka_EvergreenChronicles.bat
-```
-Browser Anda akan terbuka otomatis di `http://127.0.0.1:8082`.
-
-### Cara 2: Terminal Manual
+### 1. Backend Server (FastAPI + WebSocket)
 ```bash
 cd backend
-python run.py
+python -m venv venv
+# Windows:
+.\venv\Scripts\activate
+# Linux/macOS:
+source venv/bin/activate
+
+pip install -r requirements.txt
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-### Menjalankan Pengujian Otomatis
+### 2. Frontend Web App (Vite + React)
 ```bash
-# Unit & Integration Tests (10/10 Passed)
-python -m pytest tests/test_game_api.py -v
-
-# WebSocket 30-Bot Multiplayer Stress Test
-python tests/stress_test.py
+cd frontend
+npm install
+npm run dev
 ```
+Buka browser di `http://localhost:5173`.
+
+### 3. Menjalankan Tes Otomatis
+```bash
+cd backend
+pytest -o pythonpath=.
+```
+*Hasil: 43/43 tes unit & integrasi lulus dalam ~2 detik.*
+
+---
+
+## 📦 Dokumentasi Lengkap
+- [Arsitektur Server & WebSockets](docs/SERVER_ARCHITECTURE.md)
+- [Desain Sistem UI/UX](docs/DESIGN_SYSTEM.md)
+- [Art Bible & Pedoman Visual Pixel](docs/ART_BIBLE.md)
+- [Skema Basis Data & GameSave](docs/DATABASE_SCHEMA.md)
+- [Spesifikasi Ekspansi V4](docs/V4_EXPANSION_SPEC.md)
+- [Laporan Pengujian Kualitas V4](docs/TESTING_REPORT_V4.md)
+- [Changelog V4.0.0](docs/CHANGELOG_V4.md)
+
+---
+*© 2026 Evergreen Chronicles Project by FahmiGF. Open source under MIT License.*
