@@ -8,7 +8,25 @@ from fastapi import FastAPI, HTTPException, Body, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
 from pydantic import BaseModel
+
+from app.security_engine import (
+    DatabaseSecurity,
+    HMACIntegrityShield,
+    AntiCheatValidator,
+    WAFEngine,
+    RateLimiter,
+    InputSanitizer,
+    SecurityAuditLogger
+)
+
+from app.zones_engine import ZonesEngine
+from app.boss_engine import BossEngine
+from app.expeditions_engine import ExpeditionsEngine
+from app.restoration_engine import RestorationEngine
+from app.tools_advanced_engine import ToolsAdvancedEngine
 
 from app.game_store import (
     game_store,
@@ -78,6 +96,78 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+class SecurityFirewallMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        client_ip = request.client.host if request.client else "127.0.0.1"
+        path = request.url.path
+        query = str(request.url.query)
+
+        # 1. Anti-DDoS & Sliding-Window Rate Limiting
+        is_sensitive = path.startswith("/api/v1/game/save") or path.startswith("/api/v1/admin") or path.startswith("/api/v1/security")
+        is_allowed, ban_reason = RateLimiter.is_ip_allowed(client_ip, is_sensitive=is_sensitive)
+        if not is_allowed:
+            SecurityAuditLogger.log_event(
+                event_type="RATE_LIMIT_BLOCKED",
+                severity="MEDIUM",
+                client_ip=client_ip,
+                message=f"Request blocked by rate limiter on {path}: {ban_reason}",
+                details={"path": path, "reason": ban_reason}
+            )
+            return JSONResponse(
+                status_code=429,
+                content={
+                    "error": "RATE_LIMIT_EXCEEDED",
+                    "message": "Too many requests. CyberSec protection shield has temporarily throttled this IP.",
+                    "details": ban_reason
+                }
+            )
+
+        # 2. WAF Inspection for Path and Query String (SQLi, XSS, Path Traversal, Command Injection)
+        headers_dict = {k.lower(): v for k, v in request.headers.items()}
+        is_safe, attack_cat, pattern = WAFEngine.inspect_request(path, query, "", headers_dict, client_ip)
+        if not is_safe:
+            SecurityAuditLogger.log_event(
+                event_type=f"WAF_INTRUSION_BLOCKED_{attack_cat}",
+                severity="HIGH",
+                client_ip=client_ip,
+                message=f"Malicious attack pattern blocked on {path} ({attack_cat})",
+                details={"pattern": pattern, "query": query, "path": path}
+            )
+            RateLimiter.record_violation(client_ip, attack_cat)
+            return JSONResponse(
+                status_code=403,
+                content={
+                    "error": "ACCESS_DENIED_BY_SECURITY_SHIELD",
+                    "reason": f"Malicious payload or exploit signature detected: {attack_cat}",
+                    "defense_system": "Evergreen-Guardian-v7.0.0",
+                    "incident_logged": True
+                }
+            )
+
+        # 3. Process Request
+        try:
+            response = await call_next(request)
+        except ValueError as val_err:
+            if "Anti-Cheat" in str(val_err):
+                return JSONResponse(
+                    status_code=400,
+                    content={"error": "ANTI_CHEAT_VIOLATION", "message": str(val_err)}
+                )
+            raise
+
+        # 4. Inject Enterprise Security Defense Headers
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["Content-Security-Policy"] = "default-src 'self' 'unsafe-inline' data:; connect-src 'self' ws: wss:;"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["X-Anti-Hack-Engine"] = "Evergreen-Guardian-v7.0"
+
+        return response
+
+app.add_middleware(SecurityFirewallMiddleware)
 
 # Background NPC Simulation Loop
 async def npc_simulation_loop():
@@ -2035,6 +2125,234 @@ def get_admin_audit_logs(limit: int = 50, search: Optional[str] = None):
     return {
         "logs": AdminEngine.get_audit_logs(limit=limit, search=search)
     }
+
+
+# ==================== CYBERSECURITY & ANTI-HACK SHIELD API ====================
+
+@app.get("/api/v1/security/overview")
+def get_security_overview():
+    """Returns real-time cybersecurity telemetry, WAF status, and threat metrics."""
+    return SecurityAuditLogger.get_security_overview()
+
+@app.get("/api/v1/security/audit-logs")
+def get_security_audit_logs(limit: int = 50, severity: Optional[str] = None):
+    """Returns recent security events (tamper alerts, blocked intrusions)."""
+    return {
+        "logs": SecurityAuditLogger.get_recent_logs(limit=limit, min_severity=severity)
+    }
+
+@app.post("/api/v1/security/unblock-ip")
+def unblock_quarantined_ip(payload: Dict[str, Any] = Body(...)):
+    """Admin action to lift an IP quarantine."""
+    ip = payload.get("ip")
+    if not ip:
+        raise HTTPException(status_code=400, detail="Missing ip address")
+    success = RateLimiter.unban_ip(ip)
+    return {"success": success, "unbanned_ip": ip}
+
+@app.post("/api/v1/security/sanitize")
+def sanitize_text_input(payload: Dict[str, Any] = Body(...)):
+    """Utility endpoint to sanitize user-provided names and text."""
+    raw_text = payload.get("text", "")
+    cleaned = InputSanitizer.clean_text(raw_text)
+    return {"original": raw_text, "sanitized": cleaned}
+
+@app.post("/api/v1/security/verify-integrity/{slot_id}")
+def verify_save_integrity(slot_id: int):
+    """Verifies cryptographic HMAC signature and bounds sanity of a save slot."""
+    save = game_store.get_save(slot_id)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save slot not found")
+    save_dict = save.dict()
+    is_valid_sig = HMACIntegrityShield.verify_signature(save_dict, save.hmac_signature or "")
+    is_valid_state, violation = AntiCheatValidator.validate_game_state(save_dict)
+    return {
+        "slot_id": slot_id,
+        "hmac_verified": is_valid_sig,
+        "state_sanitary": is_valid_state,
+        "violation_reason": violation,
+        "security_verdict": "SECURE" if (is_valid_sig and is_valid_state) else "TAMPERED"
+    }
+
+
+# ==================== V7 EXPANSION: WORLD EXPANSION & BOSS SYSTEMS ====================
+
+@app.get("/api/v1/game/world-zones")
+def get_world_zones():
+    save = game_store.get_save(1)
+    player = save.player if save else {}
+    return {
+        "zones": ZonesEngine.get_all_zones(player),
+        "unlocked_zones": player.get("unlocked_zones", ["ancient_forest"]),
+        "discovered_landmarks": player.get("discovered_landmarks", [])
+    }
+
+@app.post("/api/v1/game/world-zones/unlock")
+def unlock_world_zone(payload: Dict[str, Any] = Body(...)):
+    zone_id = payload.get("zone_id")
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    res = ZonesEngine.unlock_zone(save.player, zone_id)
+    if not res.get("success", False):
+        raise HTTPException(status_code=400, detail=res.get("error", "Gagal membuka zona"))
+    return res
+
+@app.post("/api/v1/game/world-zones/fast-travel")
+def fast_travel_to_zone(payload: Dict[str, Any] = Body(...)):
+    zone_id = payload.get("zone_id")
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    res = ZonesEngine.fast_travel(save.player, zone_id)
+    if not res.get("success", False):
+        raise HTTPException(status_code=400, detail=res.get("error", "Gagal fast travel"))
+    return res
+
+@app.post("/api/v1/game/world-zones/landmark")
+def discover_zone_landmark(payload: Dict[str, Any] = Body(...)):
+    landmark_id = payload.get("landmark_id")
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    res = ZonesEngine.discover_landmark(save.player, landmark_id)
+    return res
+
+# --- BOSS ENCOUNTER ENGINE ---
+
+@app.get("/api/v1/game/bosses")
+def get_boss_catalog():
+    save = game_store.get_save(1)
+    player = save.player if save else {}
+    return {
+        "bosses": BossEngine.get_boss_catalog(player),
+        "active_encounters": list(BossEngine.ACTIVE_ENCOUNTERS.keys())
+    }
+
+@app.post("/api/v1/game/bosses/start")
+def start_boss_encounter(payload: Dict[str, Any] = Body(...)):
+    boss_id = payload.get("boss_id")
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    res = BossEngine.start_encounter(save.player, boss_id)
+    if not res.get("success", False):
+        raise HTTPException(status_code=400, detail=res.get("error", "Gagal memulai encounter boss"))
+    return res
+
+@app.post("/api/v1/game/bosses/progress")
+def progress_boss_encounter(payload: Dict[str, Any] = Body(...)):
+    encounter_id = payload.get("encounter_id")
+    amount = payload.get("amount", payload.get("contribution", 1))
+    res = BossEngine.progress_objective(encounter_id, amount)
+    if not res.get("success", False):
+        raise HTTPException(status_code=400, detail=res.get("error", "Gagal memajukan puzzle boss"))
+    return res
+
+@app.post("/api/v1/game/bosses/claim-rewards")
+def claim_boss_rewards(payload: Dict[str, Any] = Body(...)):
+    encounter_id = payload.get("encounter_id")
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    res = BossEngine.claim_boss_rewards(save.player, encounter_id)
+    if not res.get("success", False):
+        raise HTTPException(status_code=400, detail=res.get("error", "Gagal klaim reward"))
+    return res
+
+# --- EXPEDITION SYSTEM ---
+
+@app.get("/api/v1/game/expeditions/metadata")
+def get_expedition_metadata():
+    return ExpeditionsEngine.get_expedition_metadata()
+
+@app.post("/api/v1/game/expeditions/dispatch")
+def dispatch_expedition(payload: Dict[str, Any] = Body(...)):
+    zone_id = payload.get("zone_id")
+    destination_name = payload.get("destination_name", "Ekspedisi Purba")
+    companion_ids = payload.get("companion_ids") or ([payload.get("companion_id")] if payload.get("companion_id") else ["comp_elara"])
+    supplies = payload.get("supplies", [])
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    res = ExpeditionsEngine.create_and_dispatch_expedition(save.player, zone_id, destination_name, companion_ids, supplies)
+    if not res.get("success", False):
+        raise HTTPException(status_code=400, detail=res.get("error", "Gagal memberangkatkan ekspedisi"))
+    return res
+
+@app.post("/api/v1/game/expeditions/progress")
+def progress_expedition(payload: Dict[str, Any] = Body(...)):
+    expedition_id = payload.get("expedition_id")
+    objective_index = payload.get("objective_index", 0)
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    res = ExpeditionsEngine.progress_expedition_objective(save.player, expedition_id, objective_index)
+    if not res.get("success", False):
+        raise HTTPException(status_code=400, detail=res.get("error", "Gagal memperbarui progres ekspedisi"))
+    return res
+
+@app.post("/api/v1/game/expeditions/complete")
+def complete_expedition(payload: Dict[str, Any] = Body(...)):
+    expedition_id = payload.get("expedition_id")
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    res = ExpeditionsEngine.complete_expedition_and_generate_report(save.player, expedition_id)
+    if not res.get("success", False):
+        raise HTTPException(status_code=400, detail=res.get("error", "Gagal menyelesaikan ekspedisi"))
+    return res
+
+# --- RESTORATION PROJECTS ---
+
+@app.get("/api/v1/game/restoration/projects")
+def get_restoration_projects():
+    save = game_store.get_save(1)
+    player = save.player if save else {}
+    return {
+        "projects": RestorationEngine.get_projects(player)
+    }
+
+@app.post("/api/v1/game/restoration/contribute")
+def contribute_to_restoration(payload: Dict[str, Any] = Body(...)):
+    project_id = payload.get("project_id")
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    res = RestorationEngine.contribute_to_stage(save.player, project_id)
+    if not res.get("success", False):
+        raise HTTPException(status_code=400, detail=res.get("error", "Gagal kontribusi restorasi"))
+    return res
+
+# --- ADVANCED TOOLS & EQUIPMENT ---
+
+@app.get("/api/v1/game/tools/advanced")
+def get_advanced_tools():
+    save = game_store.get_save(1)
+    player = save.player if save else {}
+    return ToolsAdvancedEngine.get_tools_catalog(player)
+
+@app.post("/api/v1/game/tools/advanced/upgrade")
+def upgrade_advanced_tool(payload: Dict[str, Any] = Body(...)):
+    tool_id = payload.get("tool_id")
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    res = ToolsAdvancedEngine.upgrade_tool(save.player, tool_id)
+    if not res.get("success", False):
+        raise HTTPException(status_code=400, detail=res.get("error", "Gagal upgrade tool"))
+    return res
+
+@app.post("/api/v1/game/tools/advanced/loadout")
+def set_advanced_loadout(payload: Dict[str, Any] = Body(...)):
+    preset_id = payload.get("preset_id")
+    save = game_store.get_save(1)
+    if not save:
+        raise HTTPException(status_code=404, detail="Save not found")
+    res = ToolsAdvancedEngine.set_active_loadout(save.player, preset_id)
+    if not res.get("success", False):
+        raise HTTPException(status_code=400, detail=res.get("error", "Gagal switch loadout"))
+    return res
 
 
 # ==================== STATIC FRONTEND SERVING ====================

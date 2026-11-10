@@ -17,6 +17,13 @@ from app.journal_engine import JournalEngine
 from app.encyclopedia_engine import EncyclopediaEngine
 from app.leaderboard_engine import LeaderboardEngine
 from app.admin_engine import AdminEngine
+from app.security_engine import (
+    DatabaseSecurity,
+    HMACIntegrityShield,
+    AntiCheatValidator,
+    SecurityAuditLogger,
+    InputSanitizer
+)
 
 class Item(BaseModel):
     id: str
@@ -80,6 +87,7 @@ class GameSave(BaseModel):
     saved_at: str
     version: Optional[str] = "6.0.0"
     checksum: Optional[str] = None
+    hmac_signature: Optional[str] = None
     player: Dict[str, Any]
     world: Dict[str, Any]
     farm_grid: List[List[Dict[str, Any]]]
@@ -94,6 +102,13 @@ class GameSave(BaseModel):
     civilization: Optional[Dict[str, Any]] = None
     market: Optional[Dict[str, Any]] = None
     living_npcs: Optional[Dict[str, Any]] = None
+    unlocked_zones: Optional[List[str]] = None
+    discovered_landmarks: Optional[List[str]] = None
+    boss_records: Optional[Dict[str, Any]] = None
+    expeditions_history: Optional[List[Dict[str, Any]]] = None
+    restoration_projects: Optional[Dict[str, Any]] = None
+    advanced_tools: Optional[Dict[str, Any]] = None
+    active_loadout: Optional[str] = "farming"
 
 # Comprehensive Item Catalog
 ITEMS_DATABASE: Dict[str, Item] = {
@@ -772,10 +787,23 @@ class EvergreenGameEngine:
                 }
             }
         )
+        default_save.hmac_signature = HMACIntegrityShield.compute_signature(default_save.dict())
         self.save_slots[1] = default_save
+        try:
+            DatabaseSecurity.save_to_vault(1, default_save.dict())
+        except Exception:
+            pass
 
     def get_save(self, slot_id: int) -> Optional[GameSave]:
         save = self.save_slots.get(slot_id)
+        if not save:
+            vault_data, err = DatabaseSecurity.load_from_vault(slot_id)
+            if vault_data:
+                try:
+                    save = GameSave(**vault_data)
+                    self.save_slots[slot_id] = save
+                except Exception:
+                    pass
         if save:
             if not getattr(save, "civilization", None):
                 save.civilization = {
@@ -897,16 +925,34 @@ class EvergreenGameEngine:
         return save
 
     def save_game(self, slot_id: int, payload: Dict[str, Any]) -> GameSave:
-        # Checksum validation
+        # Anti-Cheat Validation: inspect values, bounds, and structures
+        is_valid, violation_reason = AntiCheatValidator.validate_game_state(payload)
+        if not is_valid:
+            try:
+                DatabaseSecurity.quarantine_save(slot_id, json.dumps(payload), violation_reason)
+            except Exception:
+                pass
+            SecurityAuditLogger.log_event(
+                event_type="ANTI_CHEAT_VIOLATION",
+                severity="HIGH",
+                client_ip="server_save_handler",
+                message=f"Tampered save rejected on slot {slot_id}: {violation_reason}",
+                details={"slot_id": slot_id, "violation": violation_reason}
+            )
+            raise ValueError(f"Anti-Cheat Violation: {violation_reason}")
+
+        # Checksum & HMAC Signature computation
         raw_json = json.dumps(payload, sort_keys=True, default=str).encode('utf-8')
         calc_checksum = hashlib.sha256(raw_json).hexdigest()
+        calc_hmac = HMACIntegrityShield.compute_signature(payload)
 
         save_obj = GameSave(
             slot_id=slot_id,
             save_name=payload.get("save_name", f"Slot {slot_id}"),
             saved_at=datetime.datetime.now(datetime.timezone.utc).isoformat(),
-            version="4.0.0",
+            version=payload.get("version", "4.0.0"),
             checksum=calc_checksum,
+            hmac_signature=calc_hmac,
             player=payload["player"],
             world=payload["world"],
             farm_grid=payload["farm_grid"],
@@ -920,9 +966,21 @@ class EvergreenGameEngine:
             shipping_bin=payload.get("shipping_bin", []),
             civilization=payload.get("civilization", self.save_slots.get(slot_id, self.save_slots.get(1)).civilization if self.save_slots.get(1) else None),
             market=payload.get("market", self.save_slots.get(slot_id, self.save_slots.get(1)).market if self.save_slots.get(1) else None),
-            living_npcs=payload.get("living_npcs", None)
+            living_npcs=payload.get("living_npcs", None),
+            unlocked_zones=payload.get("unlocked_zones", None),
+            discovered_landmarks=payload.get("discovered_landmarks", None),
+            boss_records=payload.get("boss_records", None),
+            expeditions_history=payload.get("expeditions_history", None),
+            restoration_projects=payload.get("restoration_projects", None),
+            advanced_tools=payload.get("advanced_tools", None),
+            active_loadout=payload.get("active_loadout", "farming")
         )
         self.save_slots[slot_id] = save_obj
+        # Data-at-rest persistence into encrypted vault SQLite
+        try:
+            DatabaseSecurity.save_to_vault(slot_id, payload)
+        except Exception:
+            pass
         return save_obj
 
     def advance_day(self, slot_id: int) -> Dict[str, Any]:
